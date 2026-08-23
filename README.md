@@ -70,6 +70,6 @@ subshift/
    Runs on `http://localhost:5173`
 
 ## Team
-- **Sudhanshu** — Schema design, backend, ML components, RBAC, security
-- **[Teammate 1]** — React frontend
-- **[Teammate 2]** — Manual-entry backend endpoint, classifier training data, documentation
+- **Sudhanshu Sharma** — Schema design, backend, ML components, RBAC, security
+- **Saksham Goyal** — React frontend
+- **Ayush Garg** — Manual-entry backend endpoint, classifier training data, documentation
