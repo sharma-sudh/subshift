@@ -1,0 +1,31 @@
+# === Secrets — never commit these ===
+.env
+.env.local
+*.env
+application-secrets.yml
+*.pem
+*.key
+
+# === Backend (Spring Boot / Java) ===
+backend/target/
+backend/build/
+backend/.gradle/
+backend/.mvn/
+backend/*.class
+backend/HELP.md
+backend/.idea/
+backend/*.iml
+backend/.vscode/
+
+# === Frontend (React / Vite) ===
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+frontend/.vite/
+
+# === OS / editor junk ===
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
+.idea/
