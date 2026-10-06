@@ -1,27 +1,24 @@
 # === Secrets — never commit these ===
-.env
-.env.local
-*.env
+.env*
+!.env.example
 application-secrets.yml
+application-local.yml
 *.pem
 *.key
 
-# === Backend (Spring Boot / Java) ===
-backend/target/
-backend/build/
-backend/.gradle/
-backend/.mvn/
-backend/*.class
-backend/HELP.md
-backend/.idea/
-backend/*.iml
-backend/.vscode/
+# === Java / Spring Boot ===
+*.class
+target/
+build/
+.gradle/
+HELP.md
+*.iml
 
 # === Frontend (React / Vite) ===
-frontend/node_modules/
-frontend/dist/
-frontend/build/
-frontend/.vite/
+node_modules/
+dist/
+.vite/
+coverage/
 
 # === OS / editor junk ===
 .DS_Store
