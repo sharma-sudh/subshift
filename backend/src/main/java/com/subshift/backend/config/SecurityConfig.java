@@ -20,7 +20,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity // makes @PreAuthorize on controllers/services actually enforced
-@EnableConfigurationProperties(JwtProperties.class)
+@EnableConfigurationProperties({JwtProperties.class, GoogleOAuthProperties.class})
 public class SecurityConfig {
 
     @Bean
@@ -38,6 +38,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/register", "/api/auth/login",
                                 "/health", "/api/health", "/error").permitAll()
+                        // Google redirects the browser here without an Authorization header;
+                        // the signed "state" parameter identifies the user instead.
+                        .requestMatchers("/api/gmail/callback").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated())
                 // Created with `new` (not a @Component) so it only runs inside the security chain.
