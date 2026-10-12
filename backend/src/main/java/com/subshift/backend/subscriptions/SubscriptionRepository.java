@@ -2,9 +2,9 @@ package com.subshift.backend.subscriptions;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import java.util.List;
+import java.util.Optional;
 
-public interface SubscriptionRepository extends JpaRepository<Subscription, Integer> {
+public interface SubscriptionRepository extends JpaRepository<Subscription, Long> {
 
-    List<Subscription> findByUserId(Integer userId);
+    Optional<Subscription> findByUserIdAndServiceId(Long userId, Long serviceId);
 }
