@@ -4,6 +4,7 @@ import Layout from './components/Layout';
 import Admin from './pages/Admin';
 import Alerts from './pages/Alerts';
 import Dashboard from './pages/Dashboard';
+import Gmail from './pages/Gmail';
 import Login from './pages/Login';
 import ManualEntry from './pages/ManualEntry';
 import NotFound from './pages/NotFound';
@@ -22,6 +23,7 @@ export default function App() {
           <Route path="/subscriptions" element={<Subscriptions />} />
           <Route path="/manual-entry" element={<ManualEntry />} />
           <Route path="/alerts" element={<Alerts />} />
+          <Route path="/gmail" element={<Gmail />} />
           <Route element={<RequireAdmin />}>
             <Route path="/admin" element={<Admin />} />
           </Route>
