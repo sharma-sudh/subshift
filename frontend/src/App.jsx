@@ -4,6 +4,7 @@ import Layout from './components/Layout';
 import Alerts from './pages/Alerts';
 import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
+import ManualEntry from './pages/ManualEntry';
 import NotFound from './pages/NotFound';
 import Register from './pages/Register';
 import Subscriptions from './pages/Subscriptions';
@@ -18,6 +19,7 @@ export default function App() {
         <Route element={<Layout />}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/subscriptions" element={<Subscriptions />} />
+          <Route path="/manual-entry" element={<ManualEntry />} />
           <Route path="/alerts" element={<Alerts />} />
           <Route path="*" element={<NotFound />} />
         </Route>
