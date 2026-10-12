@@ -18,9 +18,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Fetch candidate emails, then ask Gemini to extract renewal data from each.
- * This step only READS and EXTRACTS. Nothing is written to the database; persisting the results
- * (price_log, alerts, notifications) belongs to the transactional pipeline built on top of this.
+ * Dry run: fetch the newest candidate emails and show what Gemini extracts from each.
+ * Nothing is saved. EmailSyncService is the version that writes to the database.
  */
 @Slf4j
 @Service
@@ -29,18 +28,18 @@ public class EmailExtractionService {
 
     public record ScanItem(String messageId, String subject, String from, LocalDate emailDate,
                            boolean isRenewal, String serviceName, BigDecimal price, String currency,
-                           LocalDate billingDate, String error) {
+                           LocalDate billingDate, String model, String error) {
 
         static ScanItem of(FetchedEmail email, Extraction x) {
             // If the email states no date, fall back to the day it was received.
             LocalDate date = x.billingDate() != null ? x.billingDate() : email.date();
             return new ScanItem(email.id(), email.subject(), email.from(), email.date(),
-                    x.isRenewal(), x.serviceName(), x.price(), x.currency(), date, null);
+                    x.isRenewal(), x.serviceName(), x.price(), x.currency(), date, x.model(), null);
         }
 
         static ScanItem failed(FetchedEmail email, String error) {
             return new ScanItem(email.id(), email.subject(), email.from(), email.date(),
-                    false, null, null, null, null, error);
+                    false, null, null, null, null, null, error);
         }
     }
 
@@ -55,19 +54,17 @@ public class EmailExtractionService {
         }
         User user = currentUserService.require(userEmail);
         String accessToken = gmailTokenService.freshAccessToken(user.getId());
-        List<FetchedEmail> emails = emailFetcher.fetch(accessToken, limit);
 
         List<ScanItem> items = new ArrayList<>();
-        for (FetchedEmail email : emails) {
+        for (String id : emailFetcher.listMessageIds(accessToken, null, limit)) {
+            FetchedEmail email = emailFetcher.fetchMessage(accessToken, id);
             try {
                 items.add(ScanItem.of(email, geminiClient.extract(email)));
+            } catch (GeminiBusyException e) {
+                items.add(ScanItem.failed(email, "All Gemini models are rate limited"));
+                break;
             } catch (RestClientResponseException e) {
-                int status = e.getStatusCode().value();
-                log.warn("Gemini call failed for message {}: HTTP {}", email.id(), status);
-                items.add(ScanItem.failed(email, "Gemini returned HTTP " + status));
-                if (status == 429) {
-                    break; // rate limited: stop instead of hammering the API
-                }
+                items.add(ScanItem.failed(email, "Gemini returned HTTP " + e.getStatusCode().value()));
             } catch (Exception e) {
                 log.warn("Extraction failed for message {}: {}", email.id(), e.getMessage());
                 items.add(ScanItem.failed(email, "Extraction failed"));
