@@ -833,3 +833,145 @@ select:focus {
   gap: 0.6rem;
   margin-top: 1.2rem;
 }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 900px) {
+  .grid-2,
+  .grid-admin {
+    grid-template-columns: 1fr;
+  }
+  .filters {
+    grid-template-columns: 1fr 1fr;
+  }
+  .filters .field:first-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 820px) {
+  .menu-toggle {
+    display: inline-block;
+  }
+  .nav {
+    display: none;
+    flex-direction: column;
+    align-items: stretch;
+    flex-basis: 100%;
+    padding-bottom: 0.5rem;
+  }
+  .nav.nav-open {
+    display: flex;
+  }
+  .nav a {
+    padding: 0.65rem 0.7rem;
+  }
+  .nav-user {
+    margin: 0.5rem 0 0;
+    padding-top: 0.6rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    flex-wrap: wrap;
+  }
+  .nav-user-name {
+    max-width: none;
+  }
+}
+
+@media (max-width: 700px) {
+  .stats {
+    grid-template-columns: 1fr;
+  }
+  .stat-value {
+    font-size: 1.8rem;
+  }
+  h1 {
+    font-size: 1.4rem;
+  }
+  .page {
+    padding: 1rem 0.75rem 2.5rem;
+  }
+  .panel {
+    padding: 0.9rem;
+  }
+
+  /* Tables turn into stacked cards on phones (cells are labelled via data-label). */
+  .table-stack thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+  .table-stack,
+  .table-stack tbody,
+  .table-stack tr,
+  .table-stack td {
+    display: block;
+    width: 100%;
+  }
+  .table-stack tr {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    margin-bottom: 0.7rem;
+    padding: 0.2rem 0.2rem;
+    background: #fff;
+  }
+  .table-stack td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    border-bottom: 0;
+    padding: 0.35rem 0.6rem;
+    text-align: right;
+  }
+  .table-stack td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--muted);
+    font-size: 0.85rem;
+    text-align: left;
+    flex: none;
+  }
+  .table-stack td:not([data-label])::before {
+    content: none;
+  }
+  .table-stack td .cell-title,
+  .table-stack td .muted {
+    text-align: right;
+  }
+  .table-stack .detail-row {
+    margin-top: -0.7rem;
+    border-top: 0;
+    border-radius: 0 0 8px 8px;
+  }
+  .table-stack .detail-row td {
+    display: block;
+    text-align: left;
+  }
+  .table-stack .actions-cell {
+    justify-content: flex-end;
+  }
+  .table-stack td input,
+  .table-stack td select {
+    min-width: 0;
+  }
+  .alert-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .filters {
+    grid-template-columns: 1fr;
+  }
+  .pagination {
+    justify-content: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation-duration: 2.4s;
+  }
+  .btn {
+    transition: none;
+  }
+}
