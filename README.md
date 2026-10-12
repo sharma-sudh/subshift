@@ -1,75 +1,137 @@
-# SubShift — Subscription Price-Drift Tracker
+# SubShift
 
-A DBMS course project (BCSE307L) that detects a user's recurring subscriptions by parsing renewal/payment confirmation emails, logs price history over time, and flags renewals where the price silently increased.
+A subscription price-drift tracker. SubShift helps users keep track of their recurring subscriptions, detects when a service quietly raises its price, and alerts them so they can decide whether to keep or cancel.
 
 ## Project Description
-Most people don't notice when a subscription (OTT, music, cloud storage, gym, SaaS) quietly raises its price on renewal. SubShift connects to a user's Gmail (read-only), detects subscription-related emails via a trained classifier, extracts service/price/date via Gemini Flash, and builds a price history per subscription — flagging any renewal that's priced higher than the last recorded payment. Manual entry is available as a fallback. On top of the core tracking, SubShift includes price-prediction and spend-clustering ML components.
+
+Many people pay for several subscriptions (streaming, productivity tools, fitness apps, utilities) and rarely notice when the price goes up. SubShift solves this by recording the price of each subscription over time and flagging any increase.
+
+**Key features**
+
+- **User accounts and roles:** secure registration and login with JWT authentication and role-based access (`ADMIN` and `USER`).
+- **Subscription tracking:** add subscriptions manually or detect them automatically from renewal emails.
+- **Gmail integration:** connect a Gmail account through OAuth, fetch renewal emails, and extract the service name, price and date using Gemini.
+- **Email classifier:** a machine-learning model that tells renewal emails apart from other mail.
+- **Price history and alerts:** every price change is logged, and a price increase automatically creates an alert and a notification.
+- **Possible-cancellation detection:** subscriptions with no recent activity are flagged as possibly cancelled.
+- **Dashboard and insights:** monthly spend summary, category breakdown, price history charts, and spend clustering.
+- **Admin panel:** admins manage the catalog of services and categories.
 
 ## Tech Stack
-| Layer | Choice |
-|---|---|
-| Backend | Spring Boot |
-| Database | PostgreSQL |
-| ORM | Hibernate / Spring Data JPA |
-| Frontend | React (Vite) |
-| Auth | JWT + Google OAuth |
-| Email access | Gmail API (`gmail.readonly`) |
-| Extraction | Gemini Flash |
-| ML | Classical ML — logistic regression / Naive Bayes (email classifier), linear regression (price prediction), K-means (spend clustering) |
 
-## Repository Structure
-```
-subshift/
-├── backend/        # Spring Boot project
-├── frontend/        # React (Vite) project
-├── db/
-│   └── schema.sql   # Full PostgreSQL DDL — run this first
-├── docs/
-│   ├── SubShift_ER_Diagram.png            # Conceptual ER diagram
-│   └── SubShift_Relational_Schema.md      # Logical schema, derived from the ER diagram
-└── README.md
-```
+| Layer | Technology |
+|---|---|
+| Backend | Spring Boot 3.5, Java 17, Maven |
+| Persistence | Spring Data JPA (Hibernate) |
+| Database | PostgreSQL 15 |
+| Security | Spring Security, JWT, BCrypt |
+| Frontend | React (Vite), React Router, Recharts |
+| External APIs | Google OAuth 2.0 and Gmail API, Gemini API |
+| Machine Learning | <TODO: libraries/tools used for the classifier, price prediction and clustering> |
+| Deployment | <TODO: backend and frontend hosting platforms> |
+
+## Prerequisites
+
+Install these before you begin:
+
+- Java 17 (JDK)
+- Node.js 18 or newer, with npm
+- PostgreSQL 15
+- Git
+- Maven (optional, the project's Maven wrapper can be used instead)
 
 ## Installation Steps
-**Prerequisites:** Java 17+, Node 18+, PostgreSQL 15+
 
-1. Clone the repo:
-   ```
-   git clone <repo-url>
-   cd subshift
-   ```
-2. Create the database and run the schema:
-   ```
-   createdb subshift_db
-   psql -d subshift_db -f db/schema.sql
-   ```
-3. Copy `backend/.env.example` to `backend/.env` and fill in your own values (DB credentials, JWT secret, Google OAuth client ID/secret, Gemini API key) — **never commit this file**.
-4. Backend setup:
-   ```
-   cd backend
-   ./mvnw install
-   ```
-5. Frontend setup:
-   ```
-   cd frontend
-   npm install
-   ```
+### 1. Clone the repository
+
+```bash
+<TODO: git clone command>
+cd <TODO: repository folder name>
+git checkout dev
+```
+
+### 2. Set up the database
+
+Create the database and load the schema:
+
+```bash
+<TODO: command to create the database, e.g. subshift_db>
+<TODO: command to run schema.sql against the database>
+```
+
+### 3. Configure environment variables
+
+Copy the example file and fill in your own values. **Never commit the `.env` file.**
+
+```bash
+<TODO: command to copy .env.example to .env>
+```
+
+The following variables are required:
+
+| Variable | Description |
+|---|---|
+| <TODO: DB URL variable> | PostgreSQL connection URL |
+| <TODO: DB username variable> | Database username |
+| <TODO: DB password variable> | Database password |
+| <TODO: JWT secret variable> | Secret used to sign JWT tokens |
+| <TODO: Google client ID variable> | Google OAuth client ID |
+| <TODO: Google client secret variable> | Google OAuth client secret |
+| <TODO: Gemini API key variable> | API key for Gemini |
+| <TODO: token encryption key variable> | Key used to encrypt stored Gmail tokens |
+
+### 4. Install backend dependencies
+
+```bash
+<TODO: backend dependency install command>
+```
+
+### 5. Install frontend dependencies
+
+```bash
+<TODO: cd into frontend folder>
+<TODO: npm install command>
+```
 
 ## Execution Steps
-1. Start the backend:
-   ```
-   cd backend
-   ./mvnw spring-boot:run
-   ```
-   Runs on `http://localhost:8080`
-2. Start the frontend (separate terminal):
-   ```
-   cd frontend
-   npm run dev
-   ```
-   Runs on `http://localhost:5173`
+
+### 1. Start the backend
+
+```bash
+<TODO: command to start the Spring Boot application>
+```
+
+The API runs at `http://localhost:8080` by default.
+
+### 2. Start the frontend
+
+```bash
+<TODO: command to start the React development server>
+```
+
+The app runs at `<TODO: frontend URL and port>`.
+
+### 3. Log in
+
+<TODO: how to create or use a first user and an admin account>
+
+### 4. Run the tests
+
+```bash
+<TODO: backend test command>
+<TODO: frontend test command, if any>
+```
+
+## Project Structure
+
+```
+<TODO: paste the final folder structure of the repository>
+```
 
 ## Team
-- **Sudhanshu Sharma** — Schema design, backend, ML components, RBAC, security
-- **Saksham Goyal** — React frontend
-- **Ayush Garg** — Manual-entry backend endpoint, classifier training data, documentation
+
+- <TODO: team member names and roles>
+
+## License
+
+<TODO: add a license, or state that this is a private academic project>
