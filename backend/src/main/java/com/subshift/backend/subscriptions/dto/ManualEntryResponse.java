@@ -6,8 +6,8 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 public record ManualEntryResponse(
-        Long subscriptionId,
-        Long serviceId,
+        Integer subscriptionId,
+        Integer serviceId,
         String serviceName,
         String category,
         SubscriptionStatus status,
