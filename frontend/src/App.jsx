@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
-import { RequireAuth } from './auth/RouteGuards';
+import { RequireAdmin, RequireAuth } from './auth/RouteGuards';
 import Layout from './components/Layout';
+import Admin from './pages/Admin';
 import Alerts from './pages/Alerts';
 import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
@@ -21,6 +22,9 @@ export default function App() {
           <Route path="/subscriptions" element={<Subscriptions />} />
           <Route path="/manual-entry" element={<ManualEntry />} />
           <Route path="/alerts" element={<Alerts />} />
+          <Route element={<RequireAdmin />}>
+            <Route path="/admin" element={<Admin />} />
+          </Route>
           <Route path="*" element={<NotFound />} />
         </Route>
       </Route>
