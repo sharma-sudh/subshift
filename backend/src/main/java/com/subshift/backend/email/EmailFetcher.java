@@ -20,6 +20,7 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
+import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -31,7 +32,8 @@ public class EmailFetcher {
     private static final String API = "https://gmail.googleapis.com/gmail/v1/users/me/messages";
     private static final Pattern NUMERIC_ENTITY = Pattern.compile("&#(x?)([0-9a-fA-F]+);");
 
-    public record FetchedEmail(String id, String subject, String from, LocalDate date, String body) {}
+    public record FetchedEmail(String id, String subject, String from, LocalDate date,
+                               Instant receivedAt, String body) {}
 
     private final EmailProperties props;
     private final RestClient http = RestClients.withTimeouts(Duration.ofSeconds(20));
@@ -40,22 +42,37 @@ public class EmailFetcher {
         this.props = props;
     }
 
-    public List<FetchedEmail> fetch(String accessToken, int limit) {
-        try {
-            URI listUri = UriComponentsBuilder.fromUriString(API)
-                    .queryParam("q", props.searchQuery())
-                    .queryParam("maxResults", limit)
+    /**
+     * Ids of matching messages, NEWEST FIRST (Gmail's order). When since is given, only
+     * messages received after that moment are returned.
+     */
+    public List<String> listMessageIds(String accessToken, Instant since, int max) {
+        String query = props.searchQuery() + (since == null ? "" : " after:" + since.getEpochSecond());
+        return gmail(() -> {
+            URI uri = UriComponentsBuilder.fromUriString(API)
+                    .queryParam("q", query)
+                    .queryParam("maxResults", max)
                     .build().encode().toUri();
-            JsonNode list = get(listUri, accessToken);
-
-            List<FetchedEmail> emails = new ArrayList<>();
-            for (JsonNode ref : list.path("messages")) {
-                URI messageUri = UriComponentsBuilder.fromUriString(API + "/" + ref.path("id").asText())
-                        .queryParam("format", "full")
-                        .build().toUri();
-                emails.add(parse(ref.path("id").asText(), get(messageUri, accessToken)));
+            List<String> ids = new ArrayList<>();
+            for (JsonNode message : get(uri, accessToken).path("messages")) {
+                ids.add(message.path("id").asText());
             }
-            return emails;
+            return ids;
+        });
+    }
+
+    public FetchedEmail fetchMessage(String accessToken, String id) {
+        return gmail(() -> {
+            URI uri = UriComponentsBuilder.fromUriString(API + "/" + id)
+                    .queryParam("format", "full")
+                    .build().toUri();
+            return parse(id, get(uri, accessToken));
+        });
+    }
+
+    private <T> T gmail(Supplier<T> call) {
+        try {
+            return call.get();
         } catch (RestClientResponseException e) {
             // 403 here usually means the Gmail API isn't enabled in the Google Cloud project.
             log.warn("Gmail API error {}: {}", e.getStatusCode().value(), truncate(e.getResponseBodyAsString(), 300));
@@ -74,10 +91,9 @@ public class EmailFetcher {
     private FetchedEmail parse(String id, JsonNode message) {
         JsonNode payload = message.path("payload");
         long internalDate = message.path("internalDate").asLong(0);
-        LocalDate date = internalDate > 0
-                ? Instant.ofEpochMilli(internalDate).atZone(ZoneId.systemDefault()).toLocalDate()
-                : LocalDate.now();
-        return new FetchedEmail(id, header(payload, "Subject"), header(payload, "From"), date,
+        Instant receivedAt = internalDate > 0 ? Instant.ofEpochMilli(internalDate) : Instant.now();
+        LocalDate date = receivedAt.atZone(ZoneId.systemDefault()).toLocalDate();
+        return new FetchedEmail(id, header(payload, "Subject"), header(payload, "From"), date, receivedAt,
                 truncate(extractBody(payload), props.maxBodyChars()));
     }
 
@@ -129,7 +145,7 @@ public class EmailFetcher {
             String replacement;
             try {
                 int codePoint = Integer.parseInt(m.group(2), m.group(1).isEmpty() ? 10 : 16);
-                replacement = new String(Character.toChars(codePoint)); // e.g. &#8377; -> the rupee sign
+                replacement = new String(Character.toChars(codePoint));
             } catch (IllegalArgumentException e) {
                 replacement = "";
             }

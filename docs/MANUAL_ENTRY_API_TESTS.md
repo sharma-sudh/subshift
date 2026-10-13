@@ -18,14 +18,9 @@ curl -X POST http://localhost:8080/api/auth/login \
 
 Copy the token from the response and use it wherever you see `<YOUR_JWT_TOKEN>` below.
 
-> **Windows PowerShell users:** `curl` is an alias for a different command, and quoting JSON for `curl.exe` does not work reliably in Windows PowerShell 5.1. Either run the commands below in **Git Bash**, or use `Invoke-RestMethod`, for example:
->
-> ```powershell
-> Invoke-RestMethod -Method Post -Uri http://localhost:8080/api/subscriptions/manual `
->   -Headers @{ Authorization = "Bearer <YOUR_JWT_TOKEN>" } `
->   -ContentType "application/json" `
->   -Body '{"serviceId": 1, "price": 199, "dateRecorded": "2026-01-15"}'
-> ```
+> **Windows PowerShell users:** `curl` is an alias for a different command. Use `curl.exe` instead, and escape the quotes inside the JSON, for example:
+> `curl.exe -X POST http://localhost:8080/api/subscriptions/manual -H "Content-Type: application/json" -H "Authorization: Bearer <YOUR_JWT_TOKEN>" -d "{\"serviceId\": 1, \"price\": 199, \"dateRecorded\": \"2026-01-15\"}"`
+> Alternatively, run the commands below in Git Bash.
 
 ---
 

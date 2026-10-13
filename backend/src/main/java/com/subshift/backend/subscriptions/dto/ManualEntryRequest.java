@@ -9,7 +9,7 @@ import java.time.LocalDate;
 
 public record ManualEntryRequest(
         @NotNull(message = "serviceId is required")
-        Long serviceId,
+        Integer serviceId,
 
         @NotNull(message = "price is required")
         @Positive(message = "price must be positive")

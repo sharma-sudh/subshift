@@ -34,100 +34,63 @@ Many people pay for several subscriptions (streaming, productivity tools, fitnes
 
 Install these before you begin:
 
-- Java 17 or newer (JDK)
+- Java 17 (JDK)
 - Node.js 18 or newer, with npm
 - PostgreSQL 15
 - Git
-- Maven 3.6.3 or newer (required, there is no Maven wrapper)
+- Maven (optional, the project's Maven wrapper can be used instead)
 
 ## Installation Steps
 
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/sharma-sudh/<repo-name>.git
-cd <repo-name>
+<TODO: git clone command>
+cd <TODO: repository folder name>
 git checkout dev
 ```
 
 ### 2. Set up the database
 
-Run these from the repository root. Each one asks for your Postgres password:
+Create the database and load the schema:
 
 ```bash
-psql -U postgres -c "CREATE DATABASE subshift_db;"
-psql -U postgres -d subshift_db -f db/schema.sql
+<TODO: command to create the database, e.g. subshift_db>
+<TODO: command to run schema.sql against the database>
 ```
-
-Run `schema.sql` once on an empty database. To start over, run `DROP DATABASE subshift_db;` and repeat both commands.
 
 ### 3. Configure environment variables
 
-The `.env` file must live in `backend/`, because that is where the app is started. **Never commit the `.env` file.**
-
-macOS, Linux or Git Bash:
+Copy the example file and fill in your own values. **Never commit the `.env` file.**
 
 ```bash
-cp backend/.env.example backend/.env
+<TODO: command to copy .env.example to .env>
 ```
 
-PowerShell:
-
-```powershell
-Copy-Item backend\.env.example backend\.env
-```
-
-Then fill in the variables:
+The following variables are required:
 
 | Variable | Description |
 |---|---|
-| DB_NAME | Database name (`subshift_db`). The host and port are fixed at `localhost:5432` |
-| DB_USERNAME | Database username |
-| DB_PASSWORD | Database password |
-| JWT_SECRET | Secret for signing JWTs, at least 32 characters |
-| TOKEN_ENCRYPTION_KEY | Base64 of exactly 32 random bytes, used to encrypt stored Gmail tokens |
-| GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET | Google OAuth credentials (optional, only for Gmail) |
-| GEMINI_API_KEY | Gemini API key (optional, only for email extraction) |
-| GOOGLE_REDIRECT_URI, FRONTEND_URL, GEMINI_MODEL | Optional overrides, defaults are in `.env.example` |
+| <TODO: DB URL variable> | PostgreSQL connection URL |
+| <TODO: DB username variable> | Database username |
+| <TODO: DB password variable> | Database password |
+| <TODO: JWT secret variable> | Secret used to sign JWT tokens |
+| <TODO: Google client ID variable> | Google OAuth client ID |
+| <TODO: Google client secret variable> | Google OAuth client secret |
+| <TODO: Gemini API key variable> | API key for Gemini |
+| <TODO: token encryption key variable> | Key used to encrypt stored Gmail tokens |
 
-Generate the two secrets.
-
-macOS, Linux or Git Bash:
+### 4. Install backend dependencies
 
 ```bash
-openssl rand -base64 48   # JWT_SECRET
-openssl rand -base64 32   # TOKEN_ENCRYPTION_KEY
+<TODO: backend dependency install command>
 ```
 
-PowerShell:
-
-```powershell
-$b = New-Object byte[] 48; [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b); [Convert]::ToBase64String($b)   # JWT_SECRET
-$b = New-Object byte[] 32; [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b); [Convert]::ToBase64String($b)   # TOKEN_ENCRYPTION_KEY
-```
-
-> **Note:** Every line in `.env` must be `NAME=value`. `GOOGLE_*` and `GEMINI_API_KEY` can stay empty. Without them the app runs, but Gmail connection and email extraction are disabled.
-
-#### Google and Gemini setup (only for the Gmail features)
-
-1. In Google Cloud Console, create a project and enable the Gmail API.
-2. Under the OAuth consent screen, choose **External**, keep the status as **Testing**, and add your Google account as a test user.
-3. Under Credentials, create an OAuth client ID of type **Web application** with the authorized redirect URI `http://localhost:8080/api/gmail/callback`.
-4. Copy the client ID and secret into `backend/.env`.
-5. Create a Gemini API key at https://aistudio.google.com/app/apikey and set `GEMINI_API_KEY`.
-
-### 4. Build the backend
+### 5. Install frontend dependencies
 
 ```bash
-cd backend
-mvn -DskipTests package
-```
-
-### 5. Install the frontend dependencies
-
-```bash
-cd ../frontend
-npm install
+<TODO: cd into frontend folder>
+<TODO: npm install command>
 ```
 
 ## Execution Steps
@@ -135,68 +98,40 @@ npm install
 ### 1. Start the backend
 
 ```bash
-cd backend
-mvn spring-boot:run
+<TODO: command to start the Spring Boot application>
 ```
 
-The API runs at `http://localhost:8080` by default. Check `http://localhost:8080/api/health`, which should return `SubShift backend is running`. The app won't start if `DB_PASSWORD`, `JWT_SECRET` or `TOKEN_ENCRYPTION_KEY` is missing or invalid.
+The API runs at `http://localhost:8080` by default.
 
 ### 2. Start the frontend
 
-In a second terminal:
-
 ```bash
-cd frontend
-npm run dev
+<TODO: command to start the React development server>
 ```
 
-The app runs at `http://localhost:5173`. In development Vite forwards `/api` to the backend, so no CORS setup is needed.
+The app runs at `<TODO: frontend URL and port>`.
 
 ### 3. Log in
 
-1. Open `http://localhost:5173/register` and create an account. New accounts always get the `USER` role.
-2. To make an admin, run this, then sign out and back in, because the role is stored in your login token:
-
-   ```bash
-   psql -U postgres -d subshift_db -c "UPDATE users SET role_id = (SELECT id FROM roles WHERE name = 'ADMIN') WHERE email = 'you@example.com';"
-   ```
-
-3. The `services` table starts empty. Add services in the Admin page, or load a starter set:
-
-   ```bash
-   psql -U postgres -d subshift_db -c "INSERT INTO services (name, category_id) VALUES ('Netflix', (SELECT id FROM categories WHERE name='Entertainment')), ('Spotify', (SELECT id FROM categories WHERE name='Entertainment')), ('Google One', (SELECT id FROM categories WHERE name='Utilities')), ('Microsoft 365', (SELECT id FROM categories WHERE name='Productivity')), ('Cult.fit', (SELECT id FROM categories WHERE name='Fitness'));"
-   ```
+<TODO: how to create or use a first user and an admin account>
 
 ### 4. Run the tests
 
-There are no automated tests yet. API test examples are in `docs/MANUAL_ENTRY_API_TESTS.md`. To check that everything builds, run `mvn -DskipTests package` in `backend` and `npm run build` in `frontend`.
+```bash
+<TODO: backend test command>
+<TODO: frontend test command, if any>
+```
 
 ## Project Structure
 
 ```
-.
-├── backend/          Spring Boot API (Java 17, Maven)
-│   ├── pom.xml
-│   ├── .env.example
-│   └── src/main/
-│       ├── java/com/subshift/backend/
-│       │   ├── alerts/  auth/  catalog/  common/  config/
-│       │   ├── email/  gmail/  notifications/  pricelog/
-│       │   └── subscriptions/  training/  users/
-│       └── resources/application.yml
-├── frontend/         React + Vite app
-│   └── src/  api/  auth/  components/  hooks/  pages/  utils/
-├── db/schema.sql     Tables, view, function and trigger
-├── data/             Classifier training data
-└── docs/             Data dictionary, API tests, ER diagram, proposal
+<TODO: paste the final folder structure of the repository>
 ```
 
 ## Team
 
-- **Sudhanshu Sharma:** backend core, ML, security
-- **Saksham Goyal (Teammate 1):** React frontend
-- **Ayush Garg (Teammate 2):** backend support, data labeling, docs
+- <TODO: team member names and roles>
 
 ## License
 
-Private academic project for the DBMS course (BCSE307L). Not licensed for reuse.
+<TODO: add a license, or state that this is a private academic project>
