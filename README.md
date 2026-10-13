@@ -1,75 +1,202 @@
-# SubShift — Subscription Price-Drift Tracker
+# SubShift
 
-A DBMS course project (BCSE307L) that detects a user's recurring subscriptions by parsing renewal/payment confirmation emails, logs price history over time, and flags renewals where the price silently increased.
+A subscription price-drift tracker. SubShift helps users keep track of their recurring subscriptions, detects when a service quietly raises its price, and alerts them so they can decide whether to keep or cancel.
 
 ## Project Description
-Most people don't notice when a subscription (OTT, music, cloud storage, gym, SaaS) quietly raises its price on renewal. SubShift connects to a user's Gmail (read-only), detects subscription-related emails via a trained classifier, extracts service/price/date via Gemini Flash, and builds a price history per subscription — flagging any renewal that's priced higher than the last recorded payment. Manual entry is available as a fallback. On top of the core tracking, SubShift includes price-prediction and spend-clustering ML components.
+
+Many people pay for several subscriptions (streaming, productivity tools, fitness apps, utilities) and rarely notice when the price goes up. SubShift solves this by recording the price of each subscription over time and flagging any increase.
+
+**Key features**
+
+- **User accounts and roles:** secure registration and login with JWT authentication and role-based access (`ADMIN` and `USER`).
+- **Subscription tracking:** add subscriptions manually or detect them automatically from renewal emails.
+- **Gmail integration:** connect a Gmail account through OAuth, fetch renewal emails, and extract the service name, price and date using Gemini.
+- **Email classifier:** a machine-learning model that tells renewal emails apart from other mail.
+- **Price history and alerts:** every price change is logged, and a price increase automatically creates an alert and a notification.
+- **Possible-cancellation detection:** subscriptions with no recent activity are flagged as possibly cancelled.
+- **Dashboard and insights:** monthly spend summary, category breakdown, price history charts, and spend clustering.
+- **Admin panel:** admins manage the catalog of services and categories.
 
 ## Tech Stack
-| Layer | Choice |
-|---|---|
-| Backend | Spring Boot |
-| Database | PostgreSQL |
-| ORM | Hibernate / Spring Data JPA |
-| Frontend | React (Vite) |
-| Auth | JWT + Google OAuth |
-| Email access | Gmail API (`gmail.readonly`) |
-| Extraction | Gemini Flash |
-| ML | Classical ML — logistic regression / Naive Bayes (email classifier), linear regression (price prediction), K-means (spend clustering) |
 
-## Repository Structure
-```
-subshift/
-├── backend/        # Spring Boot project
-├── frontend/        # React (Vite) project
-├── db/
-│   └── schema.sql   # Full PostgreSQL DDL — run this first
-├── docs/
-│   ├── SubShift_ER_Diagram.png            # Conceptual ER diagram
-│   └── SubShift_Relational_Schema.md      # Logical schema, derived from the ER diagram
-└── README.md
-```
+| Layer | Technology |
+|---|---|
+| Backend | Spring Boot 3.5, Java 17, Maven |
+| Persistence | Spring Data JPA (Hibernate) |
+| Database | PostgreSQL 15 |
+| Security | Spring Security, JWT, BCrypt |
+| Frontend | React (Vite), React Router, Recharts |
+| External APIs | Google OAuth 2.0 and Gmail API, Gemini API |
+| Machine Learning | <TODO: libraries/tools used for the classifier, price prediction and clustering> |
+| Deployment | <TODO: backend and frontend hosting platforms> |
+
+## Prerequisites
+
+Install these before you begin:
+
+- Java 17 or newer (JDK)
+- Node.js 18 or newer, with npm
+- PostgreSQL 15
+- Git
+- Maven 3.6.3 or newer (required, there is no Maven wrapper)
 
 ## Installation Steps
-**Prerequisites:** Java 17+, Node 18+, PostgreSQL 15+
 
-1. Clone the repo:
-   ```
-   git clone <repo-url>
-   cd subshift
-   ```
-2. Create the database and run the schema:
-   ```
-   createdb subshift_db
-   psql -d subshift_db -f db/schema.sql
-   ```
-3. Copy `backend/.env.example` to `backend/.env` and fill in your own values (DB credentials, JWT secret, Google OAuth client ID/secret, Gemini API key) — **never commit this file**.
-4. Backend setup:
-   ```
-   cd backend
-   ./mvnw install
-   ```
-5. Frontend setup:
-   ```
-   cd frontend
-   npm install
-   ```
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/sharma-sudh/<repo-name>.git
+cd <repo-name>
+git checkout dev
+```
+
+### 2. Set up the database
+
+Run these from the repository root. Each one asks for your Postgres password:
+
+```bash
+psql -U postgres -c "CREATE DATABASE subshift_db;"
+psql -U postgres -d subshift_db -f db/schema.sql
+```
+
+Run `schema.sql` once on an empty database. To start over, run `DROP DATABASE subshift_db;` and repeat both commands.
+
+### 3. Configure environment variables
+
+The `.env` file must live in `backend/`, because that is where the app is started. **Never commit the `.env` file.**
+
+macOS, Linux or Git Bash:
+
+```bash
+cp backend/.env.example backend/.env
+```
+
+PowerShell:
+
+```powershell
+Copy-Item backend\.env.example backend\.env
+```
+
+Then fill in the variables:
+
+| Variable | Description |
+|---|---|
+| DB_NAME | Database name (`subshift_db`). The host and port are fixed at `localhost:5432` |
+| DB_USERNAME | Database username |
+| DB_PASSWORD | Database password |
+| JWT_SECRET | Secret for signing JWTs, at least 32 characters |
+| TOKEN_ENCRYPTION_KEY | Base64 of exactly 32 random bytes, used to encrypt stored Gmail tokens |
+| GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET | Google OAuth credentials (optional, only for Gmail) |
+| GEMINI_API_KEY | Gemini API key (optional, only for email extraction) |
+| GOOGLE_REDIRECT_URI, FRONTEND_URL, GEMINI_MODEL | Optional overrides, defaults are in `.env.example` |
+
+Generate the two secrets.
+
+macOS, Linux or Git Bash:
+
+```bash
+openssl rand -base64 48   # JWT_SECRET
+openssl rand -base64 32   # TOKEN_ENCRYPTION_KEY
+```
+
+PowerShell:
+
+```powershell
+$b = New-Object byte[] 48; [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b); [Convert]::ToBase64String($b)   # JWT_SECRET
+$b = New-Object byte[] 32; [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b); [Convert]::ToBase64String($b)   # TOKEN_ENCRYPTION_KEY
+```
+
+> **Note:** Every line in `.env` must be `NAME=value`. `GOOGLE_*` and `GEMINI_API_KEY` can stay empty. Without them the app runs, but Gmail connection and email extraction are disabled.
+
+#### Google and Gemini setup (only for the Gmail features)
+
+1. In Google Cloud Console, create a project and enable the Gmail API.
+2. Under the OAuth consent screen, choose **External**, keep the status as **Testing**, and add your Google account as a test user.
+3. Under Credentials, create an OAuth client ID of type **Web application** with the authorized redirect URI `http://localhost:8080/api/gmail/callback`.
+4. Copy the client ID and secret into `backend/.env`.
+5. Create a Gemini API key at https://aistudio.google.com/app/apikey and set `GEMINI_API_KEY`.
+
+### 4. Build the backend
+
+```bash
+cd backend
+mvn -DskipTests package
+```
+
+### 5. Install the frontend dependencies
+
+```bash
+cd ../frontend
+npm install
+```
 
 ## Execution Steps
-1. Start the backend:
+
+### 1. Start the backend
+
+```bash
+cd backend
+mvn spring-boot:run
+```
+
+The API runs at `http://localhost:8080` by default. Check `http://localhost:8080/api/health`, which should return `SubShift backend is running`. The app won't start if `DB_PASSWORD`, `JWT_SECRET` or `TOKEN_ENCRYPTION_KEY` is missing or invalid.
+
+### 2. Start the frontend
+
+In a second terminal:
+
+```bash
+cd frontend
+npm run dev
+```
+
+The app runs at `http://localhost:5173`. In development Vite forwards `/api` to the backend, so no CORS setup is needed.
+
+### 3. Log in
+
+1. Open `http://localhost:5173/register` and create an account. New accounts always get the `USER` role.
+2. To make an admin, run this, then sign out and back in, because the role is stored in your login token:
+
+   ```bash
+   psql -U postgres -d subshift_db -c "UPDATE users SET role_id = (SELECT id FROM roles WHERE name = 'ADMIN') WHERE email = 'you@example.com';"
    ```
-   cd backend
-   ./mvnw spring-boot:run
+
+3. The `services` table starts empty. Add services in the Admin page, or load a starter set:
+
+   ```bash
+   psql -U postgres -d subshift_db -c "INSERT INTO services (name, category_id) VALUES ('Netflix', (SELECT id FROM categories WHERE name='Entertainment')), ('Spotify', (SELECT id FROM categories WHERE name='Entertainment')), ('Google One', (SELECT id FROM categories WHERE name='Utilities')), ('Microsoft 365', (SELECT id FROM categories WHERE name='Productivity')), ('Cult.fit', (SELECT id FROM categories WHERE name='Fitness'));"
    ```
-   Runs on `http://localhost:8080`
-2. Start the frontend (separate terminal):
-   ```
-   cd frontend
-   npm run dev
-   ```
-   Runs on `http://localhost:5173`
+
+### 4. Run the tests
+
+There are no automated tests yet. API test examples are in `docs/MANUAL_ENTRY_API_TESTS.md`. To check that everything builds, run `mvn -DskipTests package` in `backend` and `npm run build` in `frontend`.
+
+## Project Structure
+
+```
+.
+├── backend/          Spring Boot API (Java 17, Maven)
+│   ├── pom.xml
+│   ├── .env.example
+│   └── src/main/
+│       ├── java/com/subshift/backend/
+│       │   ├── alerts/  auth/  catalog/  common/  config/
+│       │   ├── email/  gmail/  notifications/  pricelog/
+│       │   └── subscriptions/  training/  users/
+│       └── resources/application.yml
+├── frontend/         React + Vite app
+│   └── src/  api/  auth/  components/  hooks/  pages/  utils/
+├── db/schema.sql     Tables, view, function and trigger
+├── data/             Classifier training data
+└── docs/             Data dictionary, API tests, ER diagram, proposal
+```
 
 ## Team
-- **Sudhanshu Sharma** — Schema design, backend, ML components, RBAC, security
-- **Saksham Goyal** — React frontend
-- **Ayush Garg** — Manual-entry backend endpoint, classifier training data, documentation
+
+- **Sudhanshu Sharma:** backend core, ML, security
+- **Saksham Goyal (Teammate 1):** React frontend
+- **Ayush Garg (Teammate 2):** backend support, data labeling, docs
+
+## License
+
+Private academic project for the DBMS course (BCSE307L). Not licensed for reuse.
