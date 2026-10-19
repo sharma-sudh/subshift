@@ -6,6 +6,7 @@ import com.subshift.backend.email.EmailFetcher.FetchedEmail;
 import com.subshift.backend.gmail.GmailConnection;
 import com.subshift.backend.gmail.GmailConnectionRepository;
 import com.subshift.backend.gmail.GmailTokenService;
+import com.subshift.backend.ml.EmailClassifierService;
 import com.subshift.backend.users.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -47,6 +48,7 @@ public class EmailSyncService {
     private final EmailFetcher emailFetcher;
     private final GeminiClient geminiClient;
     private final EmailSyncPersister persister;
+    private final EmailClassifierService classifierService;
 
     public SyncReport sync(String userEmail, int limit) {
         if (!geminiClient.isConfigured()) {
@@ -89,8 +91,18 @@ public class EmailSyncService {
                 stopReason = "gmail_error";
                 break;
             }
+            // The local classifier goes first: a confident "not a renewal" saves a Gemini call.
+            Double score = classifierService.score(EmailExtractionService.classifierText(email));
+            if (classifierService.shouldSkip(score)) {
+                log.info("Classifier skipped message {} (renewal probability {})",
+                        email.id(), String.format("%.3f", score));
+                items.add(ScanItem.filtered(email, score));
+                watermark = email.receivedAt();
+                processed++;
+                continue;
+            }
             try {
-                items.add(ScanItem.of(email, geminiClient.extract(email)));
+                items.add(ScanItem.of(email, geminiClient.extract(email), score));
             } catch (GeminiBusyException e) {
                 stopReason = "gemini_rate_limited";
                 break; // this email is NOT counted as processed, so the next sync retries it

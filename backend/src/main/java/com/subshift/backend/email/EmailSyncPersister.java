@@ -103,6 +103,9 @@ public class EmailSyncPersister {
         }
 
         String handle(ScanItem item) {
+            if (ScanItem.CLASSIFIER_MODEL.equals(item.model())) {
+                return "skipped_by_classifier";
+            }
             if (item.error() != null) {
                 return "extraction_failed";
             }
