@@ -36,8 +36,8 @@ public class GeminiClient {
     /** If every model is cooling down for less than this, wait for the soonest one instead of giving up. */
     private static final long MAX_WAIT_MS = 20_000;
 
-    public record Extraction(boolean isRenewal, String serviceName, BigDecimal price,
-                             String currency, LocalDate billingDate, String model) {}
+    public record Extraction(boolean isRenewal, boolean paymentFailed, boolean recurring, String serviceName,
+                             BigDecimal price, String currency, LocalDate billingDate, String model) {}
 
     private static final String SYSTEM_PROMPT = """
             You extract subscription billing data from ONE email.
@@ -47,6 +47,11 @@ public class GeminiClient {
             (a renewal, a payment receipt for a subscription, or an upcoming renewal notice) for a service such as
             Netflix, Spotify, Google One, a gym or an app. False for newsletters, promotions, one-off purchases,
             OTPs, personal mail, shipping updates and anything else.
+            paymentFailed: true if the email says the payment failed, was declined, is pending, was refunded or was
+            cancelled. False if the charge went through, or if the email only announces an upcoming renewal.
+            recurring: true only if the email states or clearly implies that the charge repeats on a schedule
+            (monthly, yearly, auto-renews, a renewal of a plan or membership). False for a one-off purchase, an
+            in-app purchase, a single order, or when nothing in the email indicates the charge repeats.
             serviceName: the brand of the service the user pays for (for example "Netflix"). If the email comes
             from a payment processor or app store (Google Play, Apple, Razorpay, PayPal), use the actual service
             named in the email. Null if unknown.
@@ -60,11 +65,14 @@ public class GeminiClient {
             "type", "OBJECT",
             "properties", Map.of(
                     "isRenewal", Map.of("type", "BOOLEAN"),
+                    "paymentFailed", Map.of("type", "BOOLEAN"),
+                    "recurring", Map.of("type", "BOOLEAN"),
                     "serviceName", Map.of("type", "STRING", "nullable", true),
                     "price", Map.of("type", "NUMBER", "nullable", true),
                     "currency", Map.of("type", "STRING", "nullable", true),
                     "billingDate", Map.of("type", "STRING", "nullable", true)),
-            "required", List.of("isRenewal", "serviceName", "price", "currency", "billingDate"));
+            "required", List.of("isRenewal", "paymentFailed", "recurring", "serviceName", "price", "currency",
+                    "billingDate"));
 
     private final GeminiProperties props;
     private final ObjectMapper mapper;
@@ -235,6 +243,8 @@ public class GeminiClient {
     private static Extraction parse(JsonNode out, String model) {
         return new Extraction(
                 out.path("isRenewal").asBoolean(false),
+                out.path("paymentFailed").asBoolean(false),
+                out.path("recurring").asBoolean(false),
                 cleanName(text(out, "serviceName")),
                 parsePrice(out.path("price")),
                 parseCurrency(text(out, "currency")),

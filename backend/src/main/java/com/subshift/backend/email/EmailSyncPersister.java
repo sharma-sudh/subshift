@@ -112,6 +112,14 @@ public class EmailSyncPersister {
             if (!item.isRenewal()) {
                 return "skipped_not_renewal";
             }
+            // A failed or pending payment is not a price. A charge that does not repeat (a one-off purchase) is not a
+            // subscription, even if the model called the email a renewal.
+            if (item.paymentFailed()) {
+                return "skipped_payment_failed";
+            }
+            if (!item.recurring()) {
+                return "skipped_not_recurring";
+            }
             if (item.price() == null) {
                 return "skipped_no_price";
             }
