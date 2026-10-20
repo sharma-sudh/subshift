@@ -10,6 +10,7 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 
 import java.math.BigDecimal;
@@ -51,7 +52,9 @@ public class GeminiClient {
             cancelled. False if the charge went through, or if the email only announces an upcoming renewal.
             recurring: true only if the email states or clearly implies that the charge repeats on a schedule
             (monthly, yearly, auto-renews, a renewal of a plan or membership). False for a one-off purchase, an
-            in-app purchase, a single order, or when nothing in the email indicates the charge repeats.
+            in-app purchase, a single order, or when nothing in the email indicates the charge repeats. A payment
+            confirmation alone does not make a charge recurring: buying a physical product (a phone case, clothes,
+            food, a ticket, a bus booking) is one-off. When unsure, answer false.
             serviceName: the brand of the service the user pays for (for example "Netflix"). If the email comes
             from a payment processor or app store (Google Play, Apple, Razorpay, PayPal), use the actual service
             named in the email. Null if unknown.
@@ -119,6 +122,10 @@ public class GeminiClient {
                     limited = true;
                     startCooldown(model, status, e.getResponseBodyAsString());
                 } catch (ResourceAccessException e) { // timeout or network error
+                    limited = true;
+                    startCooldown(model, 0, null);
+                } catch (RestClientException e) { // a reply that can't be decoded (for example a wrong content type)
+                    log.warn("Gemini model {} sent an unreadable reply: {}", model, e.getMessage());
                     limited = true;
                     startCooldown(model, 0, null);
                 } catch (IllegalStateException e) {

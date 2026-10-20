@@ -38,8 +38,10 @@ public class EmailExtractionService {
         static ScanItem of(FetchedEmail email, Extraction x, Double renewalScore) {
             // If the email states no date, fall back to the day it was received.
             LocalDate date = x.billingDate() != null ? x.billingDate() : email.date();
+            // The model's "recurring" is only trusted if the email text has some wording about repeating billing.
+            boolean recurring = x.recurring() && RecurrenceEvidence.present(email.subject(), email.body());
             return new ScanItem(email.id(), email.subject(), email.from(), email.date(),
-                    x.isRenewal(), x.paymentFailed(), x.recurring(), x.serviceName(), x.price(), x.currency(),
+                    x.isRenewal(), x.paymentFailed(), recurring, x.serviceName(), x.price(), x.currency(),
                     date, x.model(), null, renewalScore);
         }
 
