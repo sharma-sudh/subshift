@@ -38,7 +38,7 @@ Base URL (development): `http://localhost:8080`. All request and response bodies
 | GET | `/api/notifications` | Notifications, newest first: `{id, type, message, sentAt, isRead}`. Type is `PRICE_HIKE` or `POSSIBLE_CANCELLATION`. |
 | PATCH | `/api/notifications/{id}/read` | Mark one notification as read. |
 | GET | `/api/dashboard/summary` | `{totalMonthlySpend, categoryBreakdown: [{category, amount}], subscriptions: [...]}`. |
-| GET | `/api/dashboard/insights` | `{clusters: [{category, totalSpend, subscriptionCount}]}`. |
+| GET | `/api/dashboard/insights` | `{clusters: [{category, totalSpend, subscriptionCount}], spendTiers}`. `clusters` is spend per category. `spendTiers` groups the caller's priced subscriptions into 2 to 4 price tiers with k-means: `{available, note, k, silhouette, inertia, quality, candidates: [{k, silhouette}], tiers: [{label, minPrice, maxPrice, subscriptionCount, totalSpend, services}]}`. With fewer than 3 different prices `available` is false and only `note` is set. |
 | GET | `/api/gmail/connect` | Returns `{authUrl}`. The frontend then sends the browser to that URL to start the Gmail consent flow. |
 | GET | `/api/gmail/status` | `{connected, connectedAt, lastSyncedAt}`. |
 | DELETE | `/api/gmail/disconnect` | Revoke access at Google and forget the stored tokens. |
@@ -62,10 +62,14 @@ Base URL (development): `http://localhost:8080`. All request and response bodies
 | POST | `/api/admin/classifier/train` | Retrain the renewal classifier and return its cross-validated metrics. |
 | GET | `/api/admin/classifier/metrics` | Current accuracy, precision, recall, F1 and the strongest terms. |
 | POST | `/api/admin/classifier/predict` | Body `{text}`. Shows the renewal probability for any text. |
+| POST | `/api/admin/notifications/stale-check?days=60` | Runs the stale-subscription check now (`days` optional, 1 to 3650). Returns `{staleDays, checked, created, skippedDuplicates}`. |
 
 ## Behaviour worth knowing
 
 - **Price history only stores changes.** A new row is added to `price_log` only when the price differs from the latest one.
 - **Alerts come from the database.** A trigger on `price_log` creates an alert whenever a new price is higher than the previous one. The API never inserts alerts itself.
 - **Email sync is a pipeline.** Gmail, then the local classifier (skips obvious non-renewals), then Gemini for extraction, then one database transaction that saves everything.
+- **Possible cancellation:** a daily job (09:00 server time) creates a `POSSIBLE_CANCELLATION` notification for every `ACTIVE` subscription whose `lastCheckedDate` is more than 60 days old. The same message is not repeated within 30 days. It never changes the subscription's status. Yearly plans can trigger it by mistake.
+- **Spend tiers:** k-means runs on the log of each active subscription's latest price, trying 2, 3 and 4 tiers and keeping the best silhouette score. Prices are treated as monthly, like the rest of the dashboard.
+- **What the email sync saves:** only emails Gemini marks as a renewal, whose payment did not fail (`paymentFailed` false) and which repeat on a schedule (`recurring` true). `recurring` is also forced to false in code unless the email text mentions repeating billing (subscription, renew, monthly, per month and similar), because the model sometimes calls a one-off purchase recurring. Other outcomes are `skipped_payment_failed` and `skipped_not_recurring`. `/api/email/scan` shows both flags for each email.
 - **Frontend route guards:** show admin pages only when the role decoded from the token is `ADMIN`. The backend enforces the same rule regardless.

@@ -4,6 +4,9 @@ import com.subshift.backend.common.CurrentUserService;
 import com.subshift.backend.dashboard.DashboardRepository.CategoryInsight;
 import com.subshift.backend.dashboard.DashboardRepository.CategorySpend;
 import com.subshift.backend.dashboard.DashboardRepository.OverviewRow;
+import com.subshift.backend.ml.SpendClusteringService;
+import com.subshift.backend.ml.SpendClusteringService.PricedItem;
+import com.subshift.backend.ml.SpendClusteringService.SpendTiers;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,11 +22,15 @@ public class DashboardService {
                                   List<CategorySpend> categoryBreakdown,
                                   List<OverviewRow> subscriptions) {}
 
-    /** Interim shape for the Insights page; the Review 3 clustering will return the same fields. */
-    public record InsightsResponse(List<CategoryInsight> clusters) {}
+    /**
+     * {@code clusters} is the per-category spend the Insights page already draws. {@code spendTiers} is the k-means
+     * grouping of the user's subscriptions by price, with its silhouette score.
+     */
+    public record InsightsResponse(List<CategoryInsight> clusters, SpendTiers spendTiers) {}
 
     private final DashboardRepository dashboardRepository;
     private final CurrentUserService currentUserService;
+    private final SpendClusteringService spendClusteringService;
 
     @Transactional(readOnly = true)
     public SummaryResponse summary(String email) {
@@ -39,6 +46,11 @@ public class DashboardService {
     @Transactional(readOnly = true)
     public InsightsResponse insights(String email) {
         Integer userId = currentUserService.require(email).getId();
-        return new InsightsResponse(dashboardRepository.categoryInsights(userId));
+        List<PricedItem> priced = dashboardRepository.activeSubscriptions(userId).stream()
+                .filter(row -> row.currentPrice() != null)
+                .map(row -> new PricedItem(row.serviceName(), row.category(), row.currentPrice()))
+                .toList();
+        return new InsightsResponse(dashboardRepository.categoryInsights(userId),
+                spendClusteringService.cluster(priced));
     }
 }
