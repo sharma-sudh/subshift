@@ -62,10 +62,12 @@ Base URL (development): `http://localhost:8080`. All request and response bodies
 | POST | `/api/admin/classifier/train` | Retrain the renewal classifier and return its cross-validated metrics. |
 | GET | `/api/admin/classifier/metrics` | Current accuracy, precision, recall, F1 and the strongest terms. |
 | POST | `/api/admin/classifier/predict` | Body `{text}`. Shows the renewal probability for any text. |
+| POST | `/api/admin/notifications/stale-check?days=60` | Runs the stale-subscription check now (`days` optional, 1 to 3650). Returns `{staleDays, checked, created, skippedDuplicates}`. |
 
 ## Behaviour worth knowing
 
 - **Price history only stores changes.** A new row is added to `price_log` only when the price differs from the latest one.
 - **Alerts come from the database.** A trigger on `price_log` creates an alert whenever a new price is higher than the previous one. The API never inserts alerts itself.
 - **Email sync is a pipeline.** Gmail, then the local classifier (skips obvious non-renewals), then Gemini for extraction, then one database transaction that saves everything.
+- **Possible cancellation:** a daily job (09:00 server time) creates a `POSSIBLE_CANCELLATION` notification for every `ACTIVE` subscription whose `lastCheckedDate` is more than 60 days old. The same message is not repeated within 30 days. It never changes the subscription's status. Yearly plans can trigger it by mistake.
 - **Frontend route guards:** show admin pages only when the role decoded from the token is `ADMIN`. The backend enforces the same rule regardless.
