@@ -28,7 +28,8 @@ import java.util.List;
 public class EmailExtractionService {
 
     public record ScanItem(String messageId, String subject, String from, LocalDate emailDate,
-                           boolean isRenewal, String serviceName, BigDecimal price, String currency,
+                           boolean isRenewal, boolean paymentFailed, boolean recurring,
+                           String serviceName, BigDecimal price, String currency,
                            LocalDate billingDate, String model, String error, Double renewalScore) {
 
         /** Marks an email the local classifier skipped, so Gemini was never called for it. */
@@ -37,18 +38,21 @@ public class EmailExtractionService {
         static ScanItem of(FetchedEmail email, Extraction x, Double renewalScore) {
             // If the email states no date, fall back to the day it was received.
             LocalDate date = x.billingDate() != null ? x.billingDate() : email.date();
+            // The model's "recurring" is only trusted if the email text has some wording about repeating billing.
+            boolean recurring = x.recurring() && RecurrenceEvidence.present(email.subject(), email.body());
             return new ScanItem(email.id(), email.subject(), email.from(), email.date(),
-                    x.isRenewal(), x.serviceName(), x.price(), x.currency(), date, x.model(), null, renewalScore);
+                    x.isRenewal(), x.paymentFailed(), recurring, x.serviceName(), x.price(), x.currency(),
+                    date, x.model(), null, renewalScore);
         }
 
         static ScanItem failed(FetchedEmail email, String error) {
             return new ScanItem(email.id(), email.subject(), email.from(), email.date(),
-                    false, null, null, null, null, null, error, null);
+                    false, false, false, null, null, null, null, null, error, null);
         }
 
         static ScanItem filtered(FetchedEmail email, double renewalScore) {
             return new ScanItem(email.id(), email.subject(), email.from(), email.date(),
-                    false, null, null, null, null, CLASSIFIER_MODEL, null, renewalScore);
+                    false, false, false, null, null, null, null, CLASSIFIER_MODEL, null, renewalScore);
         }
     }
 

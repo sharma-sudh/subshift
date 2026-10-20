@@ -1,0 +1,15 @@
+# Used when SPRING_PROFILES_ACTIVE=prod (the Dockerfile sets it). Everything else comes from application.yml.
+# DB_HOST, DB_PORT, DB_NAME, DB_USERNAME and DB_PASSWORD are set by render.yaml; the app refuses to start without DB_HOST.
+
+server:
+  # Render tells the app which port to listen on.
+  port: ${PORT:8080}
+
+spring:
+  datasource:
+    url: jdbc:postgresql://${DB_HOST}:${DB_PORT:5432}/${DB_NAME}
+  jpa:
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false

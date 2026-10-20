@@ -27,7 +27,7 @@ Many people pay for several subscriptions (streaming, productivity tools, fitnes
 | Security | Spring Security, JWT, BCrypt |
 | Frontend | React (Vite), React Router, Recharts |
 | External APIs | Google OAuth 2.0 and Gmail API, Gemini API |
-| Machine Learning | <TODO: libraries/tools used for the classifier, price prediction and clustering> |
+| Machine Learning | Email classifier written in plain Java (TF-IDF features with logistic regression and Naive Bayes), no external ML library |
 | Deployment | <TODO: backend and frontend hosting platforms> |
 
 ## Prerequisites
@@ -165,9 +165,53 @@ The app runs at `http://localhost:5173`. In development Vite forwards `/api` to 
    psql -U postgres -d subshift_db -c "INSERT INTO services (name, category_id) VALUES ('Netflix', (SELECT id FROM categories WHERE name='Entertainment')), ('Spotify', (SELECT id FROM categories WHERE name='Entertainment')), ('Google One', (SELECT id FROM categories WHERE name='Utilities')), ('Microsoft 365', (SELECT id FROM categories WHERE name='Productivity')), ('Cult.fit', (SELECT id FROM categories WHERE name='Fitness'));"
    ```
 
-### 4. Run the tests
+### Plain SQL alternative
 
 There are no automated tests yet. API test examples are in `docs/MANUAL_ENTRY_API_TESTS.md`. To check that everything builds, run `mvn -DskipTests package` in `backend` and `npm run build` in `frontend`.
+
+## Database Backup and Restore
+
+These commands assume the database is named `subshift_db`. Run them from any folder. Each command asks for your Postgres password. Never commit backup files, because they contain user data.
+
+### Back up
+
+```bash
+pg_dump -U postgres -Fc -f subshift_backup.dump subshift_db
+```
+
+`-Fc` writes a compressed custom-format archive that `pg_restore` can read.
+
+### Restore into a new database
+
+Restore into a fresh, empty database, never over your working one:
+
+```bash
+psql -U postgres -c "CREATE DATABASE subshift_restore_sql;"
+pg_restore -U postgres --no-owner -d subshift_restore_sql subshift_backup.dump
+```
+
+### Check the restore
+
+Run the same query on both databases. The counts must match:
+
+```bash
+psql -U postgres -d subshift_db -c "SELECT (SELECT count(*) FROM users) users, (SELECT count(*) FROM services) services, (SELECT count(*) FROM subscriptions) subscriptions, (SELECT count(*) FROM price_log) price_log, (SELECT count(*) FROM alerts) alerts, (SELECT count(*) FROM notifications) notifications;"
+psql -U postgres -d subshift_restore_sql -c "SELECT (SELECT count(*) FROM users) users, (SELECT count(*) FROM services) services, (SELECT count(*) FROM subscriptions) subscriptions, (SELECT count(*) FROM price_log) price_log, (SELECT count(*) FROM alerts) alerts, (SELECT count(*) FROM notifications) notifications;"
+```
+
+When you are done, remove the test database:
+
+```bash
+psql -U postgres -c "DROP DATABASE subshift_restore_sql;"
+```
+
+### Plain SQL alternative
+
+```bash
+pg_dump -U postgres -f backup.sql subshift_db
+psql -U postgres -c "CREATE DATABASE subshift_restore_sql;"
+psql -U postgres -d subshift_restore_sql -f backup.sql
+```
 
 ## Project Structure
 

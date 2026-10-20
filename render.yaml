@@ -1,0 +1,62 @@
+# Render Blueprint for SubShift: one Postgres database and the Spring Boot backend (built from backend/Dockerfile).
+# The frontend is deployed separately (Netlify or Vercel). See docs/DEPLOYMENT.md for the full steps.
+
+databases:
+  - name: subshift-db
+    databaseName: subshift_db
+    user: subshift
+    plan: free
+    region: singapore
+    # Open to the internet so db/schema.sql can be applied from a laptop. Protected by the generated password.
+    ipAllowList:
+      - source: 0.0.0.0/0
+        description: everywhere
+
+services:
+  - type: web
+    name: subshift-backend
+    runtime: docker
+    plan: free
+    region: singapore          # keep the same region as the database
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /api/health
+    envVars:
+      # Wired to the database above (internal connection).
+      - key: DB_HOST
+        fromDatabase:
+          name: subshift-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: subshift-db
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: subshift-db
+          property: database
+      - key: DB_USERNAME
+        fromDatabase:
+          name: subshift-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: subshift-db
+          property: password
+      # Secrets and URLs: Render asks for these when the Blueprint is created. Never put real values in this file.
+      - key: JWT_SECRET            # at least 32 characters
+        sync: false
+      - key: TOKEN_ENCRYPTION_KEY  # base64 of exactly 32 bytes
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REDIRECT_URI   # https://<backend-url>/api/gmail/callback
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: FRONTEND_URL          # https://<frontend-url>, no trailing slash
+        sync: false
+      - key: CORS_ALLOWED_ORIGINS  # same origin as FRONTEND_URL (comma-separated if more than one)
+        sync: false
