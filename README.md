@@ -6,7 +6,7 @@ A subscription price-drift tracker. SubShift helps users keep track of their rec
 
 Many people pay for several subscriptions (streaming, productivity tools, fitness apps, utilities) and rarely notice when the price goes up. SubShift solves this by recording the price of each subscription over time and flagging any increase.
 
-**Key features**
+**Key features** 
 
 - **User accounts and roles:** secure registration and login with JWT authentication and role-based access (`ADMIN` and `USER`).
 - **Subscription tracking:** add subscriptions manually or detect them automatically from renewal emails.
