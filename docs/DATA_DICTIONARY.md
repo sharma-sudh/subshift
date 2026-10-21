@@ -229,7 +229,7 @@ Powers the dashboard. It returns one row per `ACTIVE` subscription, joined with 
 
 ## Function: get_user_spend_summary(p_user_id INT)
 
-A PL/pgSQL function (the project's stored procedure) that returns the total monthly spend per category for one user. It sums the latest price of each of the user's `ACTIVE` subscriptions, grouped by category.
+A PL/pgSQL function (the project's stored procedure) that returns the total monthly spend per category for one user. It sums the latest price of each of the user's `ACTIVE` subscriptions, grouped by category. Active subscriptions that have no price yet are left out.
 
 Example: `SELECT * FROM get_user_spend_summary(1);`
 
