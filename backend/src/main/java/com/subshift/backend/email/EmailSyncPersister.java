@@ -41,6 +41,7 @@ public class EmailSyncPersister {
 
     /** Notification copy. Change the wording here. Arguments: service name, old price, new price. */
     static final String HIKE_MESSAGE = "%s price increased from \u20B9%s to \u20B9%s";
+    static final String DROP_MESSAGE = "%s price dropped from \u20B9%s to \u20B9%s";
 
     private static final String CURRENCY = "INR";
     private static final String FALLBACK_CATEGORY = "Other";
@@ -74,7 +75,7 @@ public class EmailSyncPersister {
         if (newLastSyncedAt != null) {
             gmailConnectionRepository.findByUserId(userId).ifPresent(c -> c.setLastSyncedAt(newLastSyncedAt));
         }
-        return new SyncReport(0, 0, false, null, run.prices, run.hikes, run.newSubscriptions,
+        return new SyncReport(0, 0, false, null, run.prices, run.hikes, run.drops, run.newSubscriptions,
                 run.newServices, newLastSyncedAt, outcomes);
     }
 
@@ -92,6 +93,7 @@ public class EmailSyncPersister {
         Category fallbackCategory;
         int prices;
         int hikes;
+        int drops;
         int newSubscriptions;
         int newServices;
 
@@ -181,19 +183,25 @@ public class EmailSyncPersister {
             entry.setPrice(item.price());
             entry.setDateRecorded(date);
             entry.setSource(PriceSource.EMAIL_PARSED);
-            priceLogRepository.save(entry); // the DB trigger inserts the alert when the price went up
+            priceLogRepository.save(entry); // the DB trigger inserts the alert when the price changed (up or down)
             prices++;
             touch(subscription, date);
 
-            if (latest.isPresent() && item.price().compareTo(latest.get().getPrice()) > 0) {
+            if (latest.isPresent()) {
+                int direction = item.price().compareTo(latest.get().getPrice());
+                boolean hike = direction > 0;
                 Notification notification = new Notification();
                 notification.setUser(user);
-                notification.setType(NotificationType.PRICE_HIKE);
-                notification.setMessage(String.format(HIKE_MESSAGE, service.getName(),
+                notification.setType(hike ? NotificationType.PRICE_HIKE : NotificationType.PRICE_DROP);
+                notification.setMessage(String.format(hike ? HIKE_MESSAGE : DROP_MESSAGE, service.getName(),
                         latest.get().getPrice().toPlainString(), item.price().toPlainString()));
                 notificationRepository.save(notification);
-                hikes++;
-                return "price_hike_notified";
+                if (hike) {
+                    hikes++;
+                    return "price_hike_notified";
+                }
+                drops++;
+                return "price_drop_notified";
             }
             return "price_recorded";
         }
