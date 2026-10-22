@@ -7,6 +7,7 @@ const EMPTY_TOTALS = {
   emailsProcessed: 0,
   pricesRecorded: 0,
   hikesNotified: 0,
+  dropsNotified: 0,
   newSubscriptions: 0,
   newServices: 0,
 };
@@ -15,6 +16,7 @@ const EMPTY_TOTALS = {
 const RESULT_LABELS = {
   price_recorded: 'Price recorded',
   price_hike_notified: 'Price hike detected',
+  price_drop_notified: 'Price drop detected',
   unchanged: 'Price unchanged',
   skipped_by_classifier: 'Not a renewal (classifier)',
   skipped_not_renewal: 'Not a renewal',
@@ -29,7 +31,9 @@ const RESULT_LABELS = {
   skipped_older_than_current: 'Older than current price',
 };
 const resultLabel = (r) => RESULT_LABELS[r] || String(r || '').replace(/_/g, ' ') || '—';
-const resultKind = (r) => (r === 'price_hike_notified' ? 'badge-hike' : r === 'price_recorded' ? 'badge-ok' : 'badge-muted');
+const resultKind = (r) =>
+  r === 'price_hike_notified' ? 'badge-hike' : r === 'price_drop_notified' ? 'badge-drop' : r === 'price_recorded' ? 'badge-ok' : 'badge-muted';
+const INTERESTING = ['price_recorded', 'price_hike_notified', 'price_drop_notified'];
 
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
@@ -72,13 +76,13 @@ export default function SyncPanel({ onSynced }) {
   };
 
   const t = result?.totals;
-  const interesting = (result?.outcomes ?? []).filter((o) => o.result === 'price_recorded' || o.result === 'price_hike_notified');
+  const interesting = (result?.outcomes ?? []).filter((o) => INTERESTING.includes(o.result));
 
   return (
     <section className="panel" aria-labelledby="sync">
       <h2 id="sync">Sync inbox</h2>
       <p className="muted">
-        Reads new emails and saves what it finds: prices, price-hike alerts and new subscriptions. Unlike a scan, this
+        Reads new emails and saves what it finds: prices, price-change alerts and new subscriptions. Unlike a scan, this
         changes your data.
       </p>
       <div className="scan-controls">
@@ -127,6 +131,7 @@ export default function SyncPanel({ onSynced }) {
           <dl className="sync-stats">
             <div><dt>Prices recorded</dt><dd>{t.pricesRecorded}</dd></div>
             <div><dt>Price hikes</dt><dd>{t.hikesNotified}</dd></div>
+            <div><dt>Price drops</dt><dd>{t.dropsNotified}</dd></div>
             <div><dt>New subscriptions</dt><dd>{t.newSubscriptions}</dd></div>
             <div><dt>New services</dt><dd>{t.newServices}</dd></div>
           </dl>

@@ -84,7 +84,7 @@ export default function Dashboard() {
               <Link to="/subscriptions" className="stat-note">View all</Link>
             </div>
             <div className={`stat${data.unreadAlerts > 0 ? ' stat-warn' : ''}`}>
-              <span className="stat-label">Unread price-hike alerts</span>
+              <span className="stat-label">Unread price-change alerts</span>
               <span className="stat-value">{data.unreadAlerts}</span>
               <Link to="/alerts" className="stat-note">{data.unreadAlerts > 0 ? 'Review now' : 'Open alerts'}</Link>
             </div>

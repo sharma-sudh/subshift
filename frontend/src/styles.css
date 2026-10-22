@@ -619,6 +619,10 @@ select:focus {
   background: var(--hike-soft);
   color: var(--hike);
 }
+.badge-drop {
+  background: var(--ok-soft);
+  color: var(--ok);
+}
 .badge-cancel {
   background: var(--warn-soft);
   color: var(--warn);
