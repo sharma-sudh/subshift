@@ -104,16 +104,16 @@ History of price changes for each subscription. A row is added only when the pri
 
 ## 8. alerts
 
-Price-increase alerts created automatically by the `trg_flag_price_hike` trigger when a new price is higher than the previous one.
+Price-change alerts (increases and drops) created automatically by the `trg_flag_price_hike` trigger when a new price differs from the previous one.
 
 | Column | Data Type | Key | Description |
 |---|---|---|---|
 | id | INT (SERIAL) | PK | Unique identifier for the alert. |
 | subscription_id | INT | FK → subscriptions.id | Subscription the alert is about. |
 | price_log_id | INT | FK → price_log.id | Price log entry that triggered the alert. |
-| old_price | DECIMAL(10,2) | | Price before the increase. |
-| new_price | DECIMAL(10,2) | | Price after the increase. |
-| detected_at | TIMESTAMP | | When the price increase was detected. |
+| old_price | DECIMAL(10,2) | | Price before the change. |
+| new_price | DECIMAL(10,2) | | Price after the change. Higher than `old_price` for an increase, lower for a drop. |
+| detected_at | TIMESTAMP | | When the price change was detected. |
 | is_read | BOOLEAN | | Whether the user has read the alert. Defaults to `FALSE`. |
 
 ---
@@ -134,13 +134,13 @@ Labeled sample emails used to train the renewal-email classifier.
 
 ## 10. notifications
 
-Messages sent to users about price hikes and possible cancellations.
+Messages sent to users about price increases, price drops and possible cancellations.
 
 | Column | Data Type | Key | Description |
 |---|---|---|---|
 | id | INT (SERIAL) | PK | Unique identifier for the notification. |
 | user_id | INT | FK → users.id | User who receives the notification. |
-| type | VARCHAR(30) | | Notification kind: `PRICE_HIKE` or `POSSIBLE_CANCELLATION`. |
+| type | VARCHAR(30) | | Notification kind: `PRICE_HIKE`, `PRICE_DROP` or `POSSIBLE_CANCELLATION`. |
 | message | TEXT | | Notification text shown to the user. |
 | sent_at | TIMESTAMP | | When the notification was created and sent. |
 | is_read | BOOLEAN | | Whether the user has read the notification. Defaults to `FALSE`. |
@@ -177,7 +177,7 @@ Every column listed above is `NOT NULL` except `subscriptions.last_checked_date`
 | price_log | price | Must be 0 or more | |
 | price_log | source | Must be `EMAIL_PARSED` or `MANUAL` | |
 | classifier_training_emails | label | Must be `RENEWAL` or `NOT_RENEWAL` | |
-| notifications | type | Must be `PRICE_HIKE` or `POSSIBLE_CANCELLATION` | |
+| notifications | type | Must be `PRICE_HIKE`, `PRICE_DROP` or `POSSIBLE_CANCELLATION` | |
 | alerts | is_read | | `FALSE` |
 | notifications | is_read | | `FALSE` |
 
@@ -212,7 +212,7 @@ Primary keys and unique constraints get an index automatically. These are the ex
 
 ## View: active_subscriptions_overview
 
-Powers the dashboard. It returns one row per `ACTIVE` subscription, joined with its service, its category and its most recent price (rows with no price yet are still included, with empty price columns).
+Powers the dashboard. It returns one row per `ACTIVE` subscription, joined with its service, its category and its most recent price (rows with no price yet are still included, with empty price columns). The most recent price is the one with the latest `date_recorded`, and if two prices share a date, the newest entry (highest `id`) wins.
 
 | Column | Data Type | Description |
 |---|---|---|
@@ -242,6 +242,6 @@ Example: `SELECT * FROM get_user_spend_summary(1);`
 
 ## Trigger: trg_flag_price_hike
 
-Fires `AFTER INSERT` on `price_log`, once for each new row, and runs the function `flag_price_hike()`. The function finds the previous price for the same subscription (the most recent other row by `date_recorded`). If there is a previous price and the new price is higher, it inserts a row into `alerts` with the old and new prices. Nothing is written for a first price or for a price that stayed the same or dropped.
+Fires `AFTER INSERT` on `price_log`, once for each new row, and runs the function `flag_price_hike()`. The function finds the previous price for the same subscription (the most recent other row, ordered by `date_recorded` and then by `id` so same-day changes are ordered correctly). If there is a previous price and the new price is different, higher or lower, it inserts a row into `alerts` with the old and new prices. Nothing is written for a first price. The view and the spend function use the same ordering for the latest price.
 
-The application never inserts alerts itself. All price-hike alerts come from this trigger.
+The application never inserts alerts itself. All price-change alerts (hikes and drops) come from this trigger. The trigger and function names were kept from when it only flagged increases.

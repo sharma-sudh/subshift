@@ -125,7 +125,7 @@ public class EmailSyncService {
                 : (watermark == null ? null : toLocal(watermark));
         SyncReport saved = persister.persist(user.getId(), items, newLastSynced);
         return new SyncReport(processed, ids.size() - processed, stopReason != null, stopReason,
-                saved.pricesRecorded(), saved.hikesNotified(), saved.newSubscriptions(),
+                saved.pricesRecorded(), saved.hikesNotified(), saved.dropsNotified(), saved.newSubscriptions(),
                 saved.newServices(), saved.lastSyncedAt(), saved.outcomes());
     }
 

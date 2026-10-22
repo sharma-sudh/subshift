@@ -12,7 +12,7 @@ Many people pay for several subscriptions (streaming, productivity tools, fitnes
 - **Subscription tracking:** add subscriptions manually or detect them automatically from renewal emails.
 - **Gmail integration:** connect a Gmail account through OAuth, fetch renewal emails, and extract the service name, price and date using Gemini.
 - **Email classifier:** a machine-learning model that tells renewal emails apart from other mail.
-- **Price history and alerts:** every price change is logged, and a price increase automatically creates an alert and a notification.
+- **Price history and alerts:** every price change is logged. An increase or a drop automatically creates an alert, and email syncs also create a notification.
 - **Possible-cancellation detection:** subscriptions with no recent activity are flagged as possibly cancelled.
 - **Price forecast:** predicts a subscription's next price change and roughly when it will happen, from its recorded price history.
 - **Dashboard and insights:** monthly spend summary, category breakdown, price history charts, and spend clustering.

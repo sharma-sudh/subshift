@@ -36,7 +36,7 @@ Base URL (development): `http://localhost:8080`. All request and response bodies
 | POST | `/api/subscriptions/manual` | Body `{serviceId, price, dateRecorded}`. Creates the subscription if needed and records the price when it changed. `201` if the subscription was new, otherwise `200`. |
 | GET | `/api/alerts` | Price-hike alerts, newest first: `{id, serviceName, oldPrice, newPrice, detectedAt, isRead}`. |
 | PATCH | `/api/alerts/{id}/read` | Mark one alert as read. |
-| GET | `/api/notifications` | Notifications, newest first: `{id, type, message, sentAt, isRead}`. Type is `PRICE_HIKE` or `POSSIBLE_CANCELLATION`. |
+| GET | `/api/notifications` | Notifications, newest first: `{id, type, message, sentAt, isRead}`. Type is `PRICE_HIKE`, `PRICE_DROP` or `POSSIBLE_CANCELLATION`. |
 | PATCH | `/api/notifications/{id}/read` | Mark one notification as read. |
 | GET | `/api/dashboard/summary` | `{totalMonthlySpend, categoryBreakdown: [{category, amount}], subscriptions: [...]}`. |
 | GET | `/api/dashboard/insights` | `{clusters: [{category, totalSpend, subscriptionCount}], spendTiers}`. `clusters` is spend per category. `spendTiers` groups the caller's priced subscriptions into 2 to 4 price tiers with k-means: `{available, note, k, silhouette, inertia, quality, candidates: [{k, silhouette}], tiers: [{label, minPrice, maxPrice, subscriptionCount, totalSpend, services}]}`. With fewer than 3 different prices `available` is false and only `note` is set. |
@@ -70,7 +70,7 @@ Base URL (development): `http://localhost:8080`. All request and response bodies
 ## Behaviour worth knowing
 
 - **Price history only stores changes.** A new row is added to `price_log` only when the price differs from the latest one.
-- **Alerts come from the database.** A trigger on `price_log` creates an alert whenever a new price is higher than the previous one. The API never inserts alerts itself.
+- **Alerts come from the database.** A trigger on `price_log` creates an alert whenever a new price differs from the previous one, whether it went up or down (compare `oldPrice` and `newPrice`). The API never inserts alerts itself. Email syncs also create a `PRICE_HIKE` or `PRICE_DROP` notification, and the sync report has a `dropsNotified` count next to `hikesNotified`.
 - **Email sync is a pipeline.** Gmail, then the local classifier (skips obvious non-renewals), then Gemini for extraction, then one database transaction that saves everything.
 - **Possible cancellation:** a daily job (09:00 server time) creates a `POSSIBLE_CANCELLATION` notification for every `ACTIVE` subscription whose `lastCheckedDate` is more than 60 days old. The same message is not repeated within 30 days. It never changes the subscription's status. Yearly plans can trigger it by mistake.
 - **Price forecast:** the model is trained when the backend starts, mostly on synthetic price histories (`data/generate_price_history.py`) plus the real `price_log` data, and an admin can retrain it with `POST /api/admin/forecast/train`. `expectedChangeDate` is the date of the last price change plus the predicted gap. If that date is already in the past, the change is treated as overdue and the date is set 30 days from today, with a different `note`. It is a rough estimate, not a promise.
