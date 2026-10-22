@@ -5,6 +5,7 @@ export function StatusBadge({ status }) {
 
 const TYPES = {
   PRICE_HIKE: { cls: 'badge-hike', icon: '▲', label: 'Price hike' },
+  PRICE_DROP: { cls: 'badge-drop', icon: '▼', label: 'Price drop' },
   POSSIBLE_CANCELLATION: { cls: 'badge-cancel', icon: '◔', label: 'Possible cancellation' },
 };
 

@@ -111,8 +111,8 @@ Price-change alerts (increases and drops) created automatically by the `trg_flag
 | id | INT (SERIAL) | PK | Unique identifier for the alert. |
 | subscription_id | INT | FK → subscriptions.id | Subscription the alert is about. |
 | price_log_id | INT | FK → price_log.id | Price log entry that triggered the alert. |
-| old_price | DECIMAL(10,2) | | Price before the increase. |
-| new_price | DECIMAL(10,2) | | Price after the increase. |
+| old_price | DECIMAL(10,2) | | Price before the change. |
+| new_price | DECIMAL(10,2) | | Price after the change. Higher than `old_price` for an increase, lower for a drop. |
 | detected_at | TIMESTAMP | | When the price change was detected. |
 | is_read | BOOLEAN | | Whether the user has read the alert. Defaults to `FALSE`. |
 
@@ -134,7 +134,7 @@ Labeled sample emails used to train the renewal-email classifier.
 
 ## 10. notifications
 
-Messages sent to users about price hikes and possible cancellations.
+Messages sent to users about price increases, price drops and possible cancellations.
 
 | Column | Data Type | Key | Description |
 |---|---|---|---|
@@ -212,7 +212,7 @@ Primary keys and unique constraints get an index automatically. These are the ex
 
 ## View: active_subscriptions_overview
 
-Powers the dashboard. It returns one row per `ACTIVE` subscription, joined with its service, its category and its most recent price (rows with no price yet are still included, with empty price columns).
+Powers the dashboard. It returns one row per `ACTIVE` subscription, joined with its service, its category and its most recent price (rows with no price yet are still included, with empty price columns). The most recent price is the one with the latest `date_recorded`, and if two prices share a date, the newest entry (highest `id`) wins.
 
 | Column | Data Type | Description |
 |---|---|---|
@@ -229,7 +229,7 @@ Powers the dashboard. It returns one row per `ACTIVE` subscription, joined with 
 
 ## Function: get_user_spend_summary(p_user_id INT)
 
-A PL/pgSQL function (the project's stored procedure) that returns the total monthly spend per category for one user. It sums the latest price of each of the user's `ACTIVE` subscriptions, grouped by category.
+A PL/pgSQL function (the project's stored procedure) that returns the total monthly spend per category for one user. It sums the latest price of each of the user's `ACTIVE` subscriptions, grouped by category. Active subscriptions that have no price yet are left out.
 
 Example: `SELECT * FROM get_user_spend_summary(1);`
 
@@ -244,4 +244,4 @@ Example: `SELECT * FROM get_user_spend_summary(1);`
 
 Fires `AFTER INSERT` on `price_log`, once for each new row, and runs the function `flag_price_hike()`. The function finds the previous price for the same subscription (the most recent other row, ordered by `date_recorded` and then by `id` so same-day changes are ordered correctly). If there is a previous price and the new price is different, higher or lower, it inserts a row into `alerts` with the old and new prices. Nothing is written for a first price. The view and the spend function use the same ordering for the latest price.
 
-The application never inserts alerts itself. All price-change alerts (hikes and drops) come from this trigger.
+The application never inserts alerts itself. All price-change alerts (hikes and drops) come from this trigger. The trigger and function names were kept from when it only flagged increases.

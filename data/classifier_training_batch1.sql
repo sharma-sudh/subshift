@@ -13,7 +13,7 @@
 
 DO $do$
 DECLARE
-    labeler BIGINT;
+    labeler INT;
 BEGIN
     SELECT id INTO labeler FROM users WHERE email = 'your-email@example.com';
     IF labeler IS NULL THEN

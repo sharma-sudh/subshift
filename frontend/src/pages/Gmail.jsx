@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { api } from '../api';
 import ConfirmDialog from '../components/ConfirmDialog';
+import SyncPanel from '../components/SyncPanel';
 import { Banner, ErrorMessage, Loading } from '../components/Status';
 import { useAsync } from '../hooks/useAsync';
 import { formatDate, formatDateTime, formatMoney } from '../utils/format';
@@ -114,6 +115,8 @@ export default function Gmail() {
           </div>
         )}
       </section>
+
+      {connected && <SyncPanel onSynced={status.reload} />}
 
       {connected && (
         <section className="panel" aria-labelledby="scan">

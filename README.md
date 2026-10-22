@@ -12,8 +12,9 @@ Many people pay for several subscriptions (streaming, productivity tools, fitnes
 - **Subscription tracking:** add subscriptions manually or detect them automatically from renewal emails.
 - **Gmail integration:** connect a Gmail account through OAuth, fetch renewal emails, and extract the service name, price and date using Gemini.
 - **Email classifier:** a machine-learning model that tells renewal emails apart from other mail.
-- **Price history and alerts:** every price change is logged, and a price change (increase or drop) automatically creates an alert, and email syncs also create a notification.
+- **Price history and alerts:** every price change is logged. An increase or a drop automatically creates an alert, and email syncs also create a notification.
 - **Possible-cancellation detection:** subscriptions with no recent activity are flagged as possibly cancelled.
+- **Price forecast:** predicts a subscription's next price change and roughly when it will happen, from its recorded price history.
 - **Dashboard and insights:** monthly spend summary, category breakdown, price history charts, and spend clustering.
 - **Admin panel:** admins manage the catalog of services and categories.
 
@@ -27,8 +28,8 @@ Many people pay for several subscriptions (streaming, productivity tools, fitnes
 | Security | Spring Security, JWT, BCrypt |
 | Frontend | React (Vite), React Router, Recharts |
 | External APIs | Google OAuth 2.0 and Gmail API, Gemini API |
-| Machine Learning | Email classifier written in plain Java (TF-IDF features with logistic regression and Naive Bayes), no external ML library |
-| Deployment | <TODO: backend and frontend hosting platforms> |
+| Machine Learning | Written in plain Java with no external ML library: email classifier (TF-IDF features with logistic regression and Naive Bayes), price forecast (ridge regression) and spend clustering (k-means) |
+| Deployment | Render (backend and PostgreSQL database), Vercel (frontend) |
 
 ## Prerequisites
 
@@ -40,13 +41,15 @@ Install these before you begin:
 - Git
 - Maven 3.6.3 or newer (required, there is no Maven wrapper)
 
+The `psql`, `pg_dump` and `pg_restore` commands used below must work in your terminal. On Windows, add the `bin` folder of your PostgreSQL install (for example `C:\Program Files\PostgreSQL\15\bin`) to your `PATH` if they are not found.
+
 ## Installation Steps
 
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/sharma-sudh/<repo-name>.git
-cd <repo-name>
+git clone https://github.com/sharma-sudh/subshift.git
+cd subshift
 git checkout dev
 ```
 
@@ -88,7 +91,7 @@ The following variables are used:
 | `TOKEN_ENCRYPTION_KEY` | Base64 of exactly 32 random bytes, used to encrypt stored Gmail tokens |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Google OAuth credentials (optional, only for Gmail) |
 | `GEMINI_API_KEY` | Gemini API key (optional, only for email extraction) |
-| `GOOGLE_REDIRECT_URI`, `FRONTEND_URL`, `GEMINI_MODELS` | Optional overrides, defaults are in `.env.example` |
+| `GOOGLE_REDIRECT_URI`, `FRONTEND_URL`, `CORS_ALLOWED_ORIGINS`, `GEMINI_MODELS` | Optional overrides, defaults are in `.env.example` |
 
 Generate the two secrets.
 
@@ -118,21 +121,29 @@ Every line in `.env` must be `NAME=value`. `GOOGLE_*` and `GEMINI_API_KEY` can s
 
 ### 4. Build the backend
 
+Run this from the repository root. It downloads the dependencies and checks that the code compiles:
+
 ```bash
 cd backend
 mvn -DskipTests package
+cd ..
 ```
 
 ### 5. Install frontend dependencies
 
+From the repository root:
+
 ```bash
-cd ../frontend
+cd frontend
 npm install
+cd ..
 ```
 
 ## Execution Steps
 
-### 1. Start the backend
+The backend and the frontend each need their own terminal. Open two terminals and start both in the repository root. PostgreSQL must be running.
+
+### 1. Start the backend (terminal 1)
 
 ```bash
 cd backend
@@ -141,7 +152,7 @@ mvn spring-boot:run
 
 The API runs at `http://localhost:8080` by default. Check `http://localhost:8080/api/health`, which should return `SubShift backend is running`. The app won't start if `DB_PASSWORD`, `JWT_SECRET` or `TOKEN_ENCRYPTION_KEY` is missing or invalid.
 
-### 2. Start the frontend
+### 2. Start the frontend (terminal 2)
 
 ```bash
 cd frontend
@@ -165,9 +176,19 @@ The app runs at `http://localhost:5173`. In development Vite forwards `/api` to 
    psql -U postgres -d subshift_db -c "INSERT INTO services (name, category_id) VALUES ('Netflix', (SELECT id FROM categories WHERE name='Entertainment')), ('Spotify', (SELECT id FROM categories WHERE name='Entertainment')), ('Google One', (SELECT id FROM categories WHERE name='Utilities')), ('Microsoft 365', (SELECT id FROM categories WHERE name='Productivity')), ('Cult.fit', (SELECT id FROM categories WHERE name='Fitness'));"
    ```
 
-### Plain SQL alternative
+### 4. Optional: load demo data
 
-There are no automated tests yet. API test examples are in `docs/MANUAL_ENTRY_API_TESTS.md`. To check that everything builds, run `mvn -DskipTests package` in `backend` and `npm run build` in `frontend`.
+For a quick look around without entering data by hand, load the demo accounts and sample subscriptions. Run it once, on a fresh database, after `schema.sql`. It is safe to run after the starter services above. For development only, never on a real deployment:
+
+```bash
+psql -U postgres -d subshift_db -f db/demo_seed.sql
+```
+
+Then log in as `demo@subshift.test` (user) or `admin@subshift.test` (admin) with the password `Demo@12345`.
+
+### Tests and build check
+
+There are no automated tests yet. API test examples are in `docs/MANUAL_ENTRY_API_TESTS.md`. To check that everything builds, run `mvn -DskipTests package` in `backend` and `npm run build` in `frontend`. The same checks run automatically on GitHub Actions (`.github/workflows/ci.yml`) for pushes and pull requests to `main` and `dev`.
 
 ## Database Backup and Restore
 
@@ -223,14 +244,16 @@ psql -U postgres -d subshift_restore_sql -f backup.sql
 │   └── src/main/
 │       ├── java/com/subshift/backend/
 │       │   ├── alerts/  auth/  catalog/  common/  config/
-│       │   ├── email/  gmail/  notifications/  pricelog/
-│       │   └── subscriptions/  training/  users/
+│       │   ├── dashboard/  email/  gmail/  ml/  notifications/
+│       │   └── pricelog/  subscriptions/  training/  users/
 │       └── resources/application.yml
 ├── frontend/         React + Vite app
 │   └── src/  api/  auth/  components/  hooks/  pages/  utils/
 ├── db/schema.sql     Tables, view, function and trigger
-├── data/             Classifier training data
-└── docs/             Data dictionary, API tests, ER diagram, proposal
+├── data/             Classifier training data and price-history generator
+├── docs/             API reference, data dictionary, API tests, deployment and security notes, ER diagram, proposal
+├── render.yaml       Render deployment blueprint
+└── .github/workflows/  CI workflow
 ```
 
 ## Team
