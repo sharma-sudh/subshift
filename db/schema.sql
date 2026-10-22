@@ -98,7 +98,7 @@ CREATE TABLE classifier_training_emails (
 CREATE TABLE notifications (
     id              SERIAL PRIMARY KEY,
     user_id         INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    type            VARCHAR(30) NOT NULL CHECK (type IN ('PRICE_HIKE', 'POSSIBLE_CANCELLATION')),
+    type            VARCHAR(30) NOT NULL CHECK (type IN ('PRICE_HIKE', 'PRICE_DROP', 'POSSIBLE_CANCELLATION')),
     message         TEXT NOT NULL,
     sent_at         TIMESTAMP NOT NULL DEFAULT NOW(),
     is_read         BOOLEAN NOT NULL DEFAULT FALSE
@@ -140,7 +140,7 @@ LEFT JOIN LATERAL (
     SELECT price, date_recorded
     FROM price_log
     WHERE subscription_id = s.id
-    ORDER BY date_recorded DESC
+    ORDER BY date_recorded DESC, id DESC
     LIMIT 1
 ) pl ON TRUE
 WHERE s.status = 'ACTIVE';
@@ -166,7 +166,7 @@ BEGIN
         SELECT price
         FROM price_log
         WHERE subscription_id = s.id
-        ORDER BY date_recorded DESC
+        ORDER BY date_recorded DESC, id DESC
         LIMIT 1
     ) pl ON TRUE
     WHERE s.user_id = p_user_id AND s.status = 'ACTIVE'
@@ -177,7 +177,7 @@ $$ LANGUAGE plpgsql;
 -- Example call: SELECT * FROM get_user_spend_summary(1);
 
 -- ============================================================
--- TRIGGER — mandatory, auto-flags price hikes on insert
+-- TRIGGER — mandatory, auto-flags price changes (increases and drops) on insert
 -- ============================================================
 
 CREATE OR REPLACE FUNCTION flag_price_hike()
@@ -189,10 +189,10 @@ BEGIN
     FROM price_log
     WHERE subscription_id = NEW.subscription_id
       AND id != NEW.id
-    ORDER BY date_recorded DESC
+    ORDER BY date_recorded DESC, id DESC
     LIMIT 1;
 
-    IF v_previous_price IS NOT NULL AND NEW.price > v_previous_price THEN
+    IF v_previous_price IS NOT NULL AND NEW.price <> v_previous_price THEN
         INSERT INTO alerts (subscription_id, price_log_id, old_price, new_price)
         VALUES (NEW.subscription_id, NEW.id, v_previous_price, NEW.price);
     END IF;

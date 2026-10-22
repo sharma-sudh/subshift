@@ -104,5 +104,5 @@ erDiagram
 
 ## Notes on cardinality choices
 - `USERS ||--o| GMAIL_CONNECTIONS` — one-to-zero-or-one: a user may or may not have connected Gmail yet
-- `PRICE_LOG ||--o| ALERTS` — zero-or-one: most price_log rows never trigger an alert (only ones where price increased)
+- `PRICE_LOG ||--o| ALERTS` — zero-or-one: most price_log rows never trigger an alert (only ones where the price changed)
 - `ROLES ||--o{ USERS` — one role can apply to many users; this is the RBAC mechanism (single `users` table, role via FK — never separate per-role tables, per the rubric's explicit warning)
