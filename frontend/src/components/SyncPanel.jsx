@@ -10,10 +10,7 @@ const EMPTY_TOTALS = {
   dropsNotified: 0,
   newSubscriptions: 0,
   newServices: 0,
-<<<<<<< HEAD
   ignoredNonSubscription: 0,
-=======
->>>>>>> 6b6bd0521eb4946bb2bef89b191da62c145f2505
 };
 
 /** Human wording for the `result` strings the sync pipeline returns per email. */
@@ -22,14 +19,7 @@ const RESULT_LABELS = {
   price_hike_notified: 'Price hike detected',
   price_drop_notified: 'Price drop detected',
   unchanged: 'Price unchanged',
-<<<<<<< HEAD
   skipped_payment_failed: 'Payment failed',
-=======
-  skipped_by_classifier: 'Not a renewal (classifier)',
-  skipped_not_renewal: 'Not a renewal',
-  skipped_payment_failed: 'Payment failed',
-  skipped_not_recurring: 'Not recurring',
->>>>>>> 6b6bd0521eb4946bb2bef89b191da62c145f2505
   skipped_no_price: 'No price found',
   skipped_currency: 'Unsupported currency',
   skipped_no_service_name: 'No service name',
@@ -42,12 +32,9 @@ const resultLabel = (r) => RESULT_LABELS[r] || String(r || '').replace(/_/g, ' '
 const resultKind = (r) =>
   r === 'price_hike_notified' ? 'badge-hike' : r === 'price_drop_notified' ? 'badge-drop' : r === 'price_recorded' ? 'badge-ok' : 'badge-muted';
 const INTERESTING = ['price_recorded', 'price_hike_notified', 'price_drop_notified'];
-<<<<<<< HEAD
 // Emails that are not subscription renewals (one-time purchases, promotions, OTPs ...) are never listed: the
 // server only counts them, and we show that count in the summary line.
 const NOT_A_SUBSCRIPTION = ['skipped_by_classifier', 'skipped_not_renewal', 'skipped_not_recurring'];
-=======
->>>>>>> 6b6bd0521eb4946bb2bef89b191da62c145f2505
 
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
@@ -90,24 +77,15 @@ export default function SyncPanel({ onSynced }) {
   };
 
   const t = result?.totals;
-<<<<<<< HEAD
   const outcomes = (result?.outcomes ?? []).filter((o) => !NOT_A_SUBSCRIPTION.includes(o.result));
   const interesting = outcomes.filter((o) => INTERESTING.includes(o.result));
-=======
-  const interesting = (result?.outcomes ?? []).filter((o) => INTERESTING.includes(o.result));
->>>>>>> 6b6bd0521eb4946bb2bef89b191da62c145f2505
 
   return (
     <section className="panel" aria-labelledby="sync">
       <h2 id="sync">Sync inbox</h2>
       <p className="muted">
-<<<<<<< HEAD
         Reads new emails and saves what it finds: prices, price-change alerts and new subscriptions. Only subscription
         renewals are kept; one-time purchases and other mail are ignored. Unlike a scan, this changes your data.
-=======
-        Reads new emails and saves what it finds: prices, price-change alerts and new subscriptions. Unlike a scan, this
-        changes your data.
->>>>>>> 6b6bd0521eb4946bb2bef89b191da62c145f2505
       </p>
       <div className="scan-controls">
         <div className="field">
@@ -160,15 +138,12 @@ export default function SyncPanel({ onSynced }) {
             <div><dt>New services</dt><dd>{t.newServices}</dd></div>
           </dl>
 
-<<<<<<< HEAD
           {t.ignoredNonSubscription > 0 && (
             <p className="muted small">
               {plural(t.ignoredNonSubscription, 'email')} ignored because they are not subscription renewals.
             </p>
           )}
 
-=======
->>>>>>> 6b6bd0521eb4946bb2bef89b191da62c145f2505
           {result.lastSyncedAt && <p className="muted small">Last synced {formatDateTime(result.lastSyncedAt)}.</p>}
 
           {result.remaining > 0 && (
@@ -183,7 +158,6 @@ export default function SyncPanel({ onSynced }) {
             <p className="muted small">All caught up.</p>
           )}
 
-<<<<<<< HEAD
           {outcomes.length > 0 && (
             <details className="sync-details">
               <summary>
@@ -192,16 +166,6 @@ export default function SyncPanel({ onSynced }) {
               </summary>
               <ul className="plain-list">
                 {outcomes.map((o, i) => (
-=======
-          {result.outcomes.length > 0 && (
-            <details className="sync-details">
-              <summary>
-                Details ({plural(result.outcomes.length, 'email')}
-                {interesting.length > 0 ? `, ${interesting.length} saved` : ''})
-              </summary>
-              <ul className="plain-list">
-                {result.outcomes.map((o, i) => (
->>>>>>> 6b6bd0521eb4946bb2bef89b191da62c145f2505
                   <li key={`${o.messageId}-${i}`} className="sync-outcome">
                     <span className="sync-outcome-text">
                       <span className="cell-title">{o.serviceName || o.subject || '(no subject)'}</span>

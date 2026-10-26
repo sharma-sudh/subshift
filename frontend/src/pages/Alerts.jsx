@@ -108,7 +108,6 @@ export default function Alerts() {
   );
 }
 
-<<<<<<< HEAD
 /** Switch for emailing alerts to the account address (SMTP), plus a button to check the mail setup. */
 function EmailAlertsSetting() {
   const pref = useAsync(() => api.notifications.emailPreference(), []);
@@ -164,8 +163,6 @@ function EmailAlertsSetting() {
   );
 }
 
-=======
->>>>>>> 6b6bd0521eb4946bb2bef89b191da62c145f2505
 function ChangeItem({ alert, onRead }) {
   const pct = percentChange(alert.oldPrice, alert.newPrice);
   const dropped = Number(alert.newPrice) < Number(alert.oldPrice);

@@ -10,11 +10,7 @@ import java.util.List;
  */
 public record SyncReport(int emailsProcessed, int emailsRemaining, boolean stoppedEarly, String stopReason,
                          int pricesRecorded, int hikesNotified, int dropsNotified, int newSubscriptions, int newServices,
-<<<<<<< HEAD
                          int ignoredNonSubscription, LocalDateTime lastSyncedAt, List<Outcome> outcomes) {
-=======
-                         LocalDateTime lastSyncedAt, List<Outcome> outcomes) {
->>>>>>> 6b6bd0521eb4946bb2bef89b191da62c145f2505
 
     public record Outcome(String messageId, String subject, String serviceName, String result) {}
 }

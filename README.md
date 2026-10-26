@@ -91,11 +91,8 @@ The following variables are used:
 | `TOKEN_ENCRYPTION_KEY` | Base64 of exactly 32 random bytes, used to encrypt stored Gmail tokens |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Google OAuth credentials (optional, only for Gmail) |
 | `GEMINI_API_KEY` | Gemini API key (optional, only for email extraction) |
-<<<<<<< HEAD
 | `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET` | Azure app registration for Outlook sign-in (optional, only for Outlook) |
 | `MAIL_ENABLED`, `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM` | SMTP settings for alert emails (optional). Without them alerts stay in the app only |
-=======
->>>>>>> 6b6bd0521eb4946bb2bef89b191da62c145f2505
 | `GOOGLE_REDIRECT_URI`, `FRONTEND_URL`, `CORS_ALLOWED_ORIGINS`, `GEMINI_MODELS` | Optional overrides, defaults are in `.env.example` |
 
 Generate the two secrets.
@@ -114,11 +111,7 @@ $b = New-Object byte[] 48; [Security.Cryptography.RandomNumberGenerator]::Create
 $b = New-Object byte[] 32; [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b); [Convert]::ToBase64String($b)   # TOKEN_ENCRYPTION_KEY
 ```
 
-<<<<<<< HEAD
 Every line in `.env` must be `NAME=value`. `GOOGLE_*`, `MICROSOFT_*`, `MAIL_*` and `GEMINI_API_KEY` can stay empty. Without them the app runs, but the matching feature (Gmail or Outlook connection, alert emails, email extraction) is disabled.
-=======
-Every line in `.env` must be `NAME=value`. `GOOGLE_*` and `GEMINI_API_KEY` can stay empty. Without them the app runs, but Gmail connection and email extraction are disabled.
->>>>>>> 6b6bd0521eb4946bb2bef89b191da62c145f2505
 
 #### Google and Gemini setup (only for the Gmail features)
 
@@ -128,15 +121,12 @@ Every line in `.env` must be `NAME=value`. `GOOGLE_*` and `GEMINI_API_KEY` can s
 4. Copy the client ID and secret into `backend/.env`.
 5. Create a Gemini API key at https://aistudio.google.com/app/apikey and set `GEMINI_API_KEY`.
 
-<<<<<<< HEAD
 #### Outlook, Yahoo and alert emails (all optional)
 
 - **Outlook:** in the Azure portal, register an app (App registrations), choose accounts in any organizational directory and personal Microsoft accounts, add the redirect URI `http://localhost:8080/api/mail/outlook/callback` (type Web), add the delegated permissions `Mail.Read` and `offline_access`, create a client secret, and put the IDs in `MICROSOFT_CLIENT_ID` and `MICROSOFT_CLIENT_SECRET`.
 - **Yahoo Mail:** needs nothing on the server. Each user creates an app password under Yahoo Account Security (Generate app password) and pastes it on the Email page.
 - **Alert emails (SMTP):** set `MAIL_ENABLED=true`, `MAIL_HOST`, `MAIL_USERNAME` and `MAIL_PASSWORD`. For Gmail use `smtp.gmail.com`, port 587, and a Google app password. Then use **Send test email** on the Alerts page to check it.
 
-=======
->>>>>>> 6b6bd0521eb4946bb2bef89b191da62c145f2505
 ### 4. Build the backend
 
 Run this from the repository root. It downloads the dependencies and checks that the code compiles:

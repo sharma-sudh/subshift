@@ -42,7 +42,6 @@ public class EmailSyncPersister {
     /** Notification copy. Change the wording here. Arguments: service name, old price, new price. */
     static final String HIKE_MESSAGE = "%s price increased from \u20B9%s to \u20B9%s";
     static final String DROP_MESSAGE = "%s price dropped from \u20B9%s to \u20B9%s";
-<<<<<<< HEAD
     /** Arguments: service name, old plan, new plan, old price, new price. */
     static final String PLAN_CHANGE_MESSAGE = "%s plan changed from %s to %s (\u20B9%s to \u20B9%s)";
 
@@ -52,8 +51,6 @@ public class EmailSyncPersister {
      */
     private static final Set<String> NOT_A_SUBSCRIPTION =
             Set.of("skipped_by_classifier", "skipped_not_renewal", "skipped_not_recurring");
-=======
->>>>>>> 6b6bd0521eb4946bb2bef89b191da62c145f2505
 
     private static final String CURRENCY = "INR";
     private static final String FALLBACK_CATEGORY = "Other";
@@ -94,11 +91,7 @@ public class EmailSyncPersister {
             gmailConnectionRepository.findByUserId(userId).ifPresent(c -> c.setLastSyncedAt(newLastSyncedAt));
         }
         return new SyncReport(0, 0, false, null, run.prices, run.hikes, run.drops, run.newSubscriptions,
-<<<<<<< HEAD
                 run.newServices, ignored, newLastSyncedAt, outcomes);
-=======
-                run.newServices, newLastSyncedAt, outcomes);
->>>>>>> 6b6bd0521eb4946bb2bef89b191da62c145f2505
     }
 
     /** A date in the future is an upcoming-renewal notice, so use the day the email arrived instead. */
@@ -231,7 +224,6 @@ public class EmailSyncPersister {
             if (latest.isPresent()) {
                 int direction = item.price().compareTo(latest.get().getPrice());
                 boolean hike = direction > 0;
-<<<<<<< HEAD
                 String oldPrice = latest.get().getPrice().toPlainString();
                 String newPrice = item.price().toPlainString();
                 String message = planChanged
@@ -240,14 +232,6 @@ public class EmailSyncPersister {
                 // Saves the in-app notification and emails it when the user has email alerts on.
                 notificationService.create(user, hike ? NotificationType.PRICE_HIKE : NotificationType.PRICE_DROP,
                         message);
-=======
-                Notification notification = new Notification();
-                notification.setUser(user);
-                notification.setType(hike ? NotificationType.PRICE_HIKE : NotificationType.PRICE_DROP);
-                notification.setMessage(String.format(hike ? HIKE_MESSAGE : DROP_MESSAGE, service.getName(),
-                        latest.get().getPrice().toPlainString(), item.price().toPlainString()));
-                notificationRepository.save(notification);
->>>>>>> 6b6bd0521eb4946bb2bef89b191da62c145f2505
                 if (hike) {
                     hikes++;
                     return "price_hike_notified";

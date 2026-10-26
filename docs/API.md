@@ -79,14 +79,10 @@ Base URL (development): `http://localhost:8080`. All request and response bodies
 
 - **Price history only stores changes.** A new row is added to `price_log` only when the price differs from the latest one.
 - **Alerts come from the database.** A trigger on `price_log` creates an alert whenever a new price differs from the previous one, whether it went up or down (compare `oldPrice` and `newPrice`). The API never inserts alerts itself. Email syncs also create a `PRICE_HIKE` or `PRICE_DROP` notification, and the sync report has a `dropsNotified` count next to `hikesNotified`.
-<<<<<<< HEAD
 - **Email sync is a pipeline.** The connected mailbox (Gmail, Outlook or Yahoo), then the local classifier (skips obvious non-renewals), then a check for wording about repeating billing (skips one-time purchases without calling Gemini), then Gemini for extraction, then one database transaction that saves everything.
 - **Only subscriptions are reported.** The sync response lists outcomes only for subscription emails and counts the rest in `ignoredNonSubscription`.
 - **Plans.** Subscriptions have an optional `planName`. "Claude", "Claude Pro" and "Claude Plus" resolve to one service (`Claude`) with different plans, while products with different brands ("YouTube Music" and "YouTube Premium") stay separate services.
 - **Alert emails.** Notifications are also emailed over SMTP when `MAIL_ENABLED=true` and the user has not switched email alerts off. The email is sent only after the database transaction commits.
-=======
-- **Email sync is a pipeline.** Gmail, then the local classifier (skips obvious non-renewals), then Gemini for extraction, then one database transaction that saves everything.
->>>>>>> 6b6bd0521eb4946bb2bef89b191da62c145f2505
 - **Possible cancellation:** a daily job (09:00 server time) creates a `POSSIBLE_CANCELLATION` notification for every `ACTIVE` subscription whose `lastCheckedDate` is more than 60 days old. The same message is not repeated within 30 days. It never changes the subscription's status. Yearly plans can trigger it by mistake.
 - **Price forecast:** the model is trained when the backend starts, mostly on synthetic price histories (`data/generate_price_history.py`) plus the real `price_log` data, and an admin can retrain it with `POST /api/admin/forecast/train`. `expectedChangeDate` is the date of the last price change plus the predicted gap. If that date is already in the past, the change is treated as overdue and the date is set 30 days from today, with a different `note`. It is a rough estimate, not a promise.
 - **Spend tiers:** k-means runs on the log of each active subscription's latest price, trying 2, 3 and 4 tiers and keeping the best silhouette score. Prices are treated as monthly, like the rest of the dashboard.
