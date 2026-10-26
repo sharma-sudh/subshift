@@ -62,7 +62,7 @@ export default function Layout() {
               {unread > 0 && <span className="count-pill" aria-label={`${unread} unread`}>{unread}</span>}
             </NavLink>
             <NavLink to="/insights">Insights</NavLink>
-            <NavLink to="/gmail">Gmail</NavLink>
+            <NavLink to="/gmail">Email</NavLink>
             {isAdmin && <NavLink to="/admin">Admin</NavLink>}
             <div className="nav-user">
               <span className="nav-user-name" title={user.email}>

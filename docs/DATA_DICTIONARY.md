@@ -30,6 +30,7 @@ Stores registered application users and their login credentials. There is a sing
 | email | VARCHAR(255) | UQ | Email address, used as the login identifier. |
 | password_hash | VARCHAR(255) | | BCrypt hash of the user's password (never plain text). |
 | role_id | INT | FK → roles.id | Role assigned to the user. |
+| email_alerts_enabled | BOOLEAN | | Whether alert notifications are also emailed to the user over SMTP. Defaults to `TRUE`. |
 | created_at | TIMESTAMP | | When the account was created. |
 
 ---
@@ -60,14 +61,17 @@ Catalog of subscription services (e.g. Netflix, Spotify) that users can track.
 
 ## 5. gmail_connections
 
-Stores a user's linked Gmail account and its encrypted OAuth tokens. A user can have at most one connection.
+Stores a user's connected mailbox: Gmail, Outlook or Yahoo Mail. A user can have at most one connection. The table keeps its original name from when only Gmail was supported. Every secret is stored encrypted (AES-256-GCM).
 
 | Column | Data Type | Key | Description |
 |---|---|---|---|
 | id | INT (SERIAL) | PK | Unique identifier for the connection. |
-| user_id | INT | FK → users.id, UQ | User who connected the Gmail account. |
-| access_token_encrypted | TEXT | | Encrypted OAuth access token. |
-| refresh_token_encrypted | TEXT | | Encrypted OAuth refresh token used to renew access. |
+| user_id | INT | FK → users.id, UQ | User who connected the mailbox. |
+| provider | VARCHAR(10) | | `GMAIL`, `OUTLOOK` or `YAHOO`. Defaults to `GMAIL`. |
+| mailbox_address | VARCHAR(255) | | The connected address, when known (Yahoo). Empty for Gmail and Outlook. |
+| access_token_encrypted | TEXT | | Encrypted OAuth access token (Gmail, Outlook). |
+| refresh_token_encrypted | TEXT | | Encrypted OAuth refresh token used to renew access (Gmail, Outlook). Required unless the provider is `YAHOO`. |
+| app_password_encrypted | TEXT | | Encrypted Yahoo app password used for IMAP. Required when the provider is `YAHOO`. |
 | connected_at | TIMESTAMP | | When the Gmail account was connected. |
 | last_synced_at | TIMESTAMP | | When emails were last fetched from this account. Empty until the first sync. |
 
@@ -83,6 +87,7 @@ Links a user to a service they are subscribed to. A user can subscribe to a give
 | user_id | INT | FK → users.id, UQ (with service_id) | User who owns the subscription. |
 | service_id | INT | FK → services.id, UQ (with user_id) | Service being subscribed to. |
 | status | VARCHAR(20) | | Subscription state: `ACTIVE` or `CANCELLED`. Defaults to `ACTIVE`. |
+| plan_name | VARCHAR(100) | | Plan or tier of the service, for example `Pro` or `Family`. Empty when unknown. The service row holds only the brand, so "Claude", "Claude Pro" and "Claude Plus" are one service with different plans. |
 | last_checked_date | DATE | | Last date a price or renewal was recorded for this subscription. Empty until the first check. |
 | created_at | TIMESTAMP | | When the subscription record was created. |
 
@@ -168,7 +173,7 @@ Messages sent to users about price increases, price drops and possible cancellat
 
 ## Constraints and Defaults
 
-Every column listed above is `NOT NULL` except `subscriptions.last_checked_date` and `gmail_connections.last_synced_at`.
+Every column listed above is `NOT NULL` except `subscriptions.last_checked_date`, `subscriptions.plan_name`, `gmail_connections.last_synced_at`, `gmail_connections.mailbox_address` and the three credential columns of `gmail_connections` (a check constraint requires the right one for each provider).
 
 | Table | Column | CHECK constraint | Default |
 |---|---|---|---|
@@ -178,6 +183,8 @@ Every column listed above is `NOT NULL` except `subscriptions.last_checked_date`
 | price_log | source | Must be `EMAIL_PARSED` or `MANUAL` | |
 | classifier_training_emails | label | Must be `RENEWAL` or `NOT_RENEWAL` | |
 | notifications | type | Must be `PRICE_HIKE`, `PRICE_DROP` or `POSSIBLE_CANCELLATION` | |
+| gmail_connections | provider | Must be `GMAIL`, `OUTLOOK` or `YAHOO` | `'GMAIL'` |
+| users | email_alerts_enabled | | `TRUE` |
 | alerts | is_read | | `FALSE` |
 | notifications | is_read | | `FALSE` |
 

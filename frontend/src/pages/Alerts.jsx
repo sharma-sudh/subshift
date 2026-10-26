@@ -55,6 +55,8 @@ export default function Alerts() {
         </div>
       </div>
 
+      <EmailAlertsSetting />
+
       <div className="tabs" role="tablist" aria-label="Alert types">
         <button type="button" role="tab" aria-selected={tab === 'changes'} className={`tab${tab === 'changes' ? ' tab-active' : ''}`} onClick={() => setTab('changes')}>
           Price changes {unreadAlerts > 0 && <span className="count-pill">{unreadAlerts}</span>}
@@ -103,6 +105,61 @@ export default function Alerts() {
         </>
       )}
     </div>
+  );
+}
+
+/** Switch for emailing alerts to the account address (SMTP), plus a button to check the mail setup. */
+function EmailAlertsSetting() {
+  const pref = useAsync(() => api.notifications.emailPreference(), []);
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState(null);
+
+  // An older backend without the endpoint just hides this panel.
+  if (pref.error || pref.data === undefined || pref.data === null) return null;
+
+  const toggle = async (enabled) => {
+    setBusy(true);
+    setNote(null);
+    try {
+      pref.setData(await api.notifications.setEmailPreference(enabled));
+    } catch (e) {
+      setNote({ kind: 'error', text: e.message });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const sendTest = async () => {
+    setBusy(true);
+    setNote(null);
+    try {
+      await api.notifications.sendTestEmail();
+      setNote({ kind: 'success', text: 'Test email sent to your account address. Check your inbox (and spam).' });
+    } catch (e) {
+      setNote({ kind: 'error', text: e.message });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <section className="panel" aria-labelledby="email-alerts">
+      <h2 id="email-alerts">Email alerts</h2>
+      <div className="toolbar">
+        <label className="check">
+          <input type="checkbox" checked={pref.data} disabled={busy} onChange={(e) => toggle(e.target.checked)} /> Also email me
+          price changes and possible cancellations
+        </label>
+        <button type="button" className="btn btn-secondary btn-sm" onClick={sendTest} disabled={busy}>
+          Send test email
+        </button>
+      </div>
+      {note && (
+        <Banner kind={note.kind} onClose={() => setNote(null)}>
+          {note.text}
+        </Banner>
+      )}
+    </section>
   );
 }
 

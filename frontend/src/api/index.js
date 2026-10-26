@@ -97,6 +97,18 @@ export const alerts = {
 export const notifications = {
   list: async () => list(await request('/api/notifications')).map(normalizeNotification),
   markRead: async (id) => normalizeNotification(await request(`/api/notifications/${id}/read`, { method: 'PATCH' })),
+  /** Whether alerts are also emailed to the account address. */
+  emailPreference: async () => Boolean((await request('/api/notifications/email-preference'))?.enabled),
+  setEmailPreference: async (enabled) =>
+    Boolean((await request('/api/notifications/email-preference', { method: 'PUT', body: { enabled } }))?.enabled),
+  sendTestEmail: () =>
+    request('/api/notifications/test-email', {
+      method: 'POST',
+      messages: {
+        503: 'Email alerts are not set up on the server yet (the SMTP settings are missing).',
+        502: 'The mail server did not accept the test message. Check the SMTP settings.',
+      },
+    }),
 };
 
 export const dashboard = {
@@ -142,6 +154,32 @@ export const dashboard = {
   },
 };
 
+const ALREADY_CONNECTED = 'Another mailbox is already connected. Disconnect it first.';
+
+/** The connected mailbox, whichever provider it is (Gmail, Outlook or Yahoo). */
+export const mail = {
+  status: () => request('/api/mail/status'),
+  disconnect: () => request('/api/mail/disconnect', { method: 'DELETE' }),
+  connectGmail: () =>
+    request('/api/gmail/connect', {
+      messages: { 503: 'Google sign-in is not configured on the server.', 409: ALREADY_CONNECTED },
+    }),
+  connectOutlook: () =>
+    request('/api/mail/outlook/connect', {
+      messages: { 503: 'Outlook sign-in is not configured on the server.', 409: ALREADY_CONNECTED },
+    }),
+  connectYahoo: (email, appPassword) =>
+    request('/api/mail/yahoo/connect', {
+      method: 'POST',
+      body: { email: email.trim(), appPassword },
+      messages: {
+        400: 'Yahoo rejected that address or app password. Use a Yahoo address and a generated app password, not your normal password.',
+        409: ALREADY_CONNECTED,
+        502: 'Could not reach Yahoo Mail. Please try again.',
+      },
+    }),
+};
+
 export const gmail = {
   status: () => request('/api/gmail/status'),
   connect: () => request('/api/gmail/connect', { messages: { 503: 'Google sign-in is not configured on the server.' } }),
@@ -154,18 +192,18 @@ export const gmail = {
     request(`/api/email/sync?limit=${encodeURIComponent(limit)}`, {
       method: 'POST',
       messages: {
-        409: 'Gmail is not connected (or the connection has expired). Connect Gmail first.',
+        409: 'No mailbox is connected (or the connection has expired). Connect your email first.',
         503: 'Email sync is not configured on the server (Gemini API key missing).',
-        502: 'Google or Gemini failed while syncing. Please try again.',
+        502: 'Your mail provider or Gemini failed while syncing. Please try again.',
       },
     }),
   scan: (limit) =>
     request(`/api/email/scan?limit=${encodeURIComponent(limit)}`, {
       method: 'POST',
       messages: {
-        409: 'Gmail is not connected (or the connection has expired). Connect Gmail first.',
+        409: 'No mailbox is connected (or the connection has expired). Connect your email first.',
         503: 'The email scanner is not configured on the server (Gemini API key missing).',
-        502: 'Google or Gemini failed while scanning. Please try again.',
+        502: 'Your mail provider or Gemini failed while scanning. Please try again.',
       },
     }),
 };
@@ -205,4 +243,4 @@ export const admin = {
   },
 };
 
-export const api = { auth, catalog, subscriptions, alerts, notifications, dashboard, gmail, admin };
+export const api = { auth, catalog, subscriptions, alerts, notifications, dashboard, mail, gmail, admin };
