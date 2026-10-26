@@ -31,6 +31,10 @@ public class User {
     @JoinColumn(name = "role_id", nullable = false)
     private Role role;
 
+    /** When true, alert notifications are also sent to the account email over SMTP. */
+    @Column(name = "email_alerts_enabled", nullable = false)
+    private Boolean emailAlertsEnabled = true;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

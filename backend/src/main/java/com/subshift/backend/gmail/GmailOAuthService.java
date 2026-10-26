@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.subshift.backend.auth.JwtService;
 import com.subshift.backend.common.CurrentUserService;
 import com.subshift.backend.config.GoogleOAuthProperties;
+import com.subshift.backend.mail.ProviderType;
 import com.subshift.backend.users.User;
 import io.jsonwebtoken.JwtException;
 import lombok.extern.slf4j.Slf4j;
@@ -65,7 +66,14 @@ public class GmailOAuthService {
                 || props.clientSecret() == null || props.clientSecret().isBlank()) {
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Google OAuth is not configured");
         }
-        currentUserService.require(email);
+        User user = currentUserService.require(email);
+        // One mailbox per user: switching provider means disconnecting the current one first.
+        connectionRepository.findByUserId(user.getId())
+                .filter(c -> c.getProvider() != ProviderType.GMAIL)
+                .ifPresent(c -> {
+                    throw new ResponseStatusException(HttpStatus.CONFLICT,
+                            "Disconnect " + c.getProvider().label() + " before connecting Gmail");
+                });
         return UriComponentsBuilder.fromUriString(AUTH_URL)
                 .queryParam("client_id", props.clientId())
                 .queryParam("redirect_uri", props.redirectUri())
@@ -118,13 +126,14 @@ public class GmailOAuthService {
     public StatusResponse status(String email) {
         User user = currentUserService.require(email);
         return connectionRepository.findByUserId(user.getId())
+                .filter(c -> c.getProvider() == ProviderType.GMAIL)
                 .map(c -> new StatusResponse(true, c.getConnectedAt(), c.getLastSyncedAt()))
                 .orElse(new StatusResponse(false, null, null));
     }
 
     public void disconnect(String email) {
         User user = currentUserService.require(email);
-        connectionRepository.findByUserId(user.getId()).ifPresent(c -> {
+        connectionRepository.findByUserId(user.getId()).filter(c -> c.getProvider() == ProviderType.GMAIL).ifPresent(c -> {
             revokeAtGoogle(c);
             connectionRepository.delete(c);
         });
@@ -149,6 +158,7 @@ public class GmailOAuthService {
         GmailConnection connection = connectionRepository.findByUserId(user.getId())
                 .orElseGet(GmailConnection::new);
         connection.setUser(user);
+        connection.useProvider(ProviderType.GMAIL);
         connection.setAccessTokenEncrypted(encryptor.encrypt(tokens.accessToken()));
         connection.setRefreshTokenEncrypted(encryptor.encrypt(tokens.refreshToken()));
         connectionRepository.save(connection);

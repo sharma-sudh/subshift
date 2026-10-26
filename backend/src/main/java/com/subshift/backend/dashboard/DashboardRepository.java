@@ -20,7 +20,8 @@ public class DashboardRepository {
     public record CategorySpend(String category, BigDecimal amount) {}
 
     public record OverviewRow(Integer id, String serviceName, String category, String status,
-                              BigDecimal currentPrice, LocalDate lastCheckedDate, LocalDate priceLastUpdated) {}
+                              BigDecimal currentPrice, LocalDate lastCheckedDate, LocalDate priceLastUpdated,
+                              String planName) {}
 
     public record CategoryInsight(String category, BigDecimal totalSpend, int subscriptionCount) {}
 
@@ -38,7 +39,7 @@ public class DashboardRepository {
     public List<OverviewRow> activeSubscriptions(Integer userId) {
         return jdbc.query(
                 "SELECT subscription_id, service_name, category_name, status, current_price, "
-                        + "last_checked_date, price_last_updated "
+                        + "last_checked_date, price_last_updated, plan_name "
                         + "FROM active_subscriptions_overview WHERE user_id = ? ORDER BY service_name",
                 (rs, i) -> new OverviewRow(
                         rs.getInt("subscription_id"),
@@ -47,7 +48,8 @@ public class DashboardRepository {
                         rs.getString("status"),
                         rs.getBigDecimal("current_price"),
                         rs.getObject("last_checked_date", LocalDate.class),
-                        rs.getObject("price_last_updated", LocalDate.class)),
+                        rs.getObject("price_last_updated", LocalDate.class),
+                        rs.getString("plan_name")),
                 userId);
     }
 

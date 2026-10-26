@@ -7,8 +7,7 @@ import com.subshift.backend.catalog.ServiceRepository;
 import com.subshift.backend.email.EmailExtractionService.ScanItem;
 import com.subshift.backend.email.SyncReport.Outcome;
 import com.subshift.backend.gmail.GmailConnectionRepository;
-import com.subshift.backend.notifications.Notification;
-import com.subshift.backend.notifications.NotificationRepository;
+import com.subshift.backend.notifications.NotificationService;
 import com.subshift.backend.notifications.NotificationType;
 import com.subshift.backend.pricelog.PriceLog;
 import com.subshift.backend.pricelog.PriceLogRepository;
@@ -28,6 +27,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * The single transactional write step: extraction results -> services, subscriptions, price_log,
@@ -42,6 +42,15 @@ public class EmailSyncPersister {
     /** Notification copy. Change the wording here. Arguments: service name, old price, new price. */
     static final String HIKE_MESSAGE = "%s price increased from \u20B9%s to \u20B9%s";
     static final String DROP_MESSAGE = "%s price dropped from \u20B9%s to \u20B9%s";
+    /** Arguments: service name, old plan, new plan, old price, new price. */
+    static final String PLAN_CHANGE_MESSAGE = "%s plan changed from %s to %s (\u20B9%s to \u20B9%s)";
+
+    /**
+     * Results for emails that are not subscription renewals at all: promotions, OTPs, one-time purchases.
+     * They are counted but never listed, so the sync details only show real subscription activity.
+     */
+    private static final Set<String> NOT_A_SUBSCRIPTION =
+            Set.of("skipped_by_classifier", "skipped_not_renewal", "skipped_not_recurring");
 
     private static final String CURRENCY = "INR";
     private static final String FALLBACK_CATEGORY = "Other";
@@ -53,7 +62,7 @@ public class EmailSyncPersister {
     private final CategoryRepository categoryRepository;
     private final SubscriptionRepository subscriptionRepository;
     private final PriceLogRepository priceLogRepository;
-    private final NotificationRepository notificationRepository;
+    private final NotificationService notificationService;
     private final GmailConnectionRepository gmailConnectionRepository;
     private final ServiceMatcher serviceMatcher;
 
@@ -68,15 +77,21 @@ public class EmailSyncPersister {
                 .sorted(Comparator.comparing((ScanItem i) -> effectiveDate(i, run.today)))
                 .toList();
         List<Outcome> outcomes = new ArrayList<>();
+        int ignored = 0;
         for (ScanItem item : ordered) {
-            outcomes.add(new Outcome(item.messageId(), item.subject(), item.serviceName(), run.handle(item)));
+            String result = run.handle(item);
+            if (NOT_A_SUBSCRIPTION.contains(result)) {
+                ignored++;
+                continue;
+            }
+            outcomes.add(new Outcome(item.messageId(), item.subject(), item.serviceName(), result));
         }
 
         if (newLastSyncedAt != null) {
             gmailConnectionRepository.findByUserId(userId).ifPresent(c -> c.setLastSyncedAt(newLastSyncedAt));
         }
         return new SyncReport(0, 0, false, null, run.prices, run.hikes, run.drops, run.newSubscriptions,
-                run.newServices, newLastSyncedAt, outcomes);
+                run.newServices, ignored, newLastSyncedAt, outcomes);
     }
 
     /** A date in the future is an upcoming-renewal notice, so use the day the email arrived instead. */
@@ -133,8 +148,15 @@ public class EmailSyncPersister {
                 return "skipped_no_service_name";
             }
 
-            Service service = serviceMatcher.match(item.serviceName(), known).orElse(null);
-            if (service == null) {
+            // "Claude", "Claude Pro" and "Claude Plus" are one service with different plans; names that differ in
+            // the brand ("YouTube Music" and "YouTube Premium") stay separate services.
+            Service service;
+            String plan;
+            ServiceMatcher.Match match = serviceMatcher.matchWithPlan(item.serviceName(), known).orElse(null);
+            if (match != null) {
+                service = match.service();
+                plan = match.plan();
+            } else {
                 if (!serviceMatcher.isValidName(item.serviceName())) {
                     return "skipped_invalid_service_name";
                 }
@@ -146,11 +168,17 @@ public class EmailSyncPersister {
                     return "skipped_no_other_category";
                 }
                 service = new Service();
-                service.setName(serviceMatcher.displayName(item.serviceName()));
+                // The catalog is shared, so it stores the brand ("Claude"), not whichever plan was seen first.
+                service.setName(serviceMatcher.catalogName(item.serviceName()));
                 service.setCategory(category);
                 service = serviceRepository.save(service);
                 known.add(service);
                 newServices++;
+                plan = serviceMatcher.matchWithPlan(item.serviceName(), List.of(service))
+                        .map(ServiceMatcher.Match::plan).orElse(null);
+            }
+            if (plan == null) {
+                plan = serviceMatcher.cleanPlan(item.planName()); // the plan the model read from the email
             }
 
             LocalDate date = effectiveDate(item, today);
@@ -167,15 +195,21 @@ public class EmailSyncPersister {
 
             Optional<PriceLog> latest = priceLogRepository
                     .findTopBySubscriptionIdOrderByDateRecordedDescIdDesc(subscription.getId());
-            if (latest.isPresent()) {
-                PriceLog current = latest.get();
-                if (date.isBefore(current.getDateRecorded())) {
-                    return "skipped_older_than_current"; // history, not the current price
-                }
-                if (current.getPrice().compareTo(item.price()) == 0) {
-                    touch(subscription, date);
-                    return "unchanged"; // price_log only stores price changes
-                }
+            if (latest.isPresent() && date.isBefore(latest.get().getDateRecorded())) {
+                return "skipped_older_than_current"; // history, not the current price
+            }
+
+            // The plan is only updated from an email that is not older than what we already know.
+            String previousPlan = subscription.getPlanName();
+            boolean planChanged = plan != null && previousPlan != null && !plan.equalsIgnoreCase(previousPlan);
+            if (plan != null && !plan.equalsIgnoreCase(previousPlan)) {
+                subscription.setPlanName(plan);
+            }
+            String label = service.getName() + (plan == null ? "" : " (" + plan + ")");
+
+            if (latest.isPresent() && latest.get().getPrice().compareTo(item.price()) == 0) {
+                touch(subscription, date);
+                return "unchanged"; // price_log only stores price changes
             }
 
             PriceLog entry = new PriceLog();
@@ -190,12 +224,14 @@ public class EmailSyncPersister {
             if (latest.isPresent()) {
                 int direction = item.price().compareTo(latest.get().getPrice());
                 boolean hike = direction > 0;
-                Notification notification = new Notification();
-                notification.setUser(user);
-                notification.setType(hike ? NotificationType.PRICE_HIKE : NotificationType.PRICE_DROP);
-                notification.setMessage(String.format(hike ? HIKE_MESSAGE : DROP_MESSAGE, service.getName(),
-                        latest.get().getPrice().toPlainString(), item.price().toPlainString()));
-                notificationRepository.save(notification);
+                String oldPrice = latest.get().getPrice().toPlainString();
+                String newPrice = item.price().toPlainString();
+                String message = planChanged
+                        ? String.format(PLAN_CHANGE_MESSAGE, service.getName(), previousPlan, plan, oldPrice, newPrice)
+                        : String.format(hike ? HIKE_MESSAGE : DROP_MESSAGE, label, oldPrice, newPrice);
+                // Saves the in-app notification and emails it when the user has email alerts on.
+                notificationService.create(user, hike ? NotificationType.PRICE_HIKE : NotificationType.PRICE_DROP,
+                        message);
                 if (hike) {
                     hikes++;
                     return "price_hike_notified";

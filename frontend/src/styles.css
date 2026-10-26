@@ -1168,3 +1168,31 @@ textarea {
     margin-bottom: 0.2rem;
   }
 }
+
+/* ---------- Email provider choice ---------- */
+.provider-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+  margin-top: 0.8rem;
+}
+.provider-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 1rem;
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  align-items: flex-start;
+}
+.provider-card h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+.provider-card p {
+  margin: 0;
+}
+.provider-card .field {
+  width: 100%;
+}

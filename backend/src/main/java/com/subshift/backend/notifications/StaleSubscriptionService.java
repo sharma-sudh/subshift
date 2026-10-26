@@ -30,6 +30,7 @@ public class StaleSubscriptionService {
 
     private final SubscriptionRepository subscriptionRepository;
     private final NotificationRepository notificationRepository;
+    private final NotificationService notificationService;
 
     @Transactional
     public StaleCheckResult run(int staleDays) {
@@ -47,11 +48,8 @@ public class StaleSubscriptionService {
                 skipped++;
                 continue;
             }
-            Notification notification = new Notification();
-            notification.setUser(subscription.getUser());
-            notification.setType(NotificationType.POSSIBLE_CANCELLATION);
-            notification.setMessage(message);
-            notificationRepository.save(notification);
+            // Saves the in-app notification and emails it when the user has email alerts on.
+            notificationService.create(subscription.getUser(), NotificationType.POSSIBLE_CANCELLATION, message);
             created++;
         }
         log.info("Stale-subscription check ({} days): {} stale, {} notifications created, {} duplicates skipped",

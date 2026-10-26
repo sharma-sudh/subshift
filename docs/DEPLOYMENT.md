@@ -59,3 +59,14 @@ Invoke-RestMethod https://<backend-url>/api/health
    Log in again so the token carries the new role.
 3. Connect Gmail from the app. While the Google consent screen is in Testing mode the refresh token expires after 7 days, so **reconnect right before the demo and the review**.
 4. Train the classifier on the live database if you want it (`POST /api/admin/classifier/train`); it needs rows in `classifier_training_emails`.
+
+## 7. Updating an existing deployment (Outlook, Yahoo, plans and alert emails)
+
+1. Apply the database patch to the live database. It is safe to run twice:
+   `psql -h <external-host> -U subshift -d subshift_db -v ON_ERROR_STOP=1 -f db/patches/2026-10-25_review_changes.sql`
+   Do this before deploying the new backend, because the backend checks the schema at startup.
+2. Add the optional environment variables from `render.yaml` in the Render dashboard.
+   - **Outlook:** register an Azure app, add the redirect URI `https://<backend-url>/api/mail/outlook/callback`, set `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET` and `MICROSOFT_REDIRECT_URI`.
+   - **Alert emails:** set `MAIL_ENABLED=true`, `MAIL_HOST`, `MAIL_USERNAME`, `MAIL_PASSWORD` (and `MAIL_PORT` if not 587).
+3. Heads-up on SMTP from Render's free tier: as far as I know, free web services block outbound SMTP on the usual ports (25, 465, 587). Check Render's current docs. If your messages time out, try a provider that accepts port 2525, upgrade the plan, or demo alert emails from a local run (`MAIL_*` in `backend/.env`).
+4. Services created before this change can include plan variants as separate rows (for example "Claude" and "Claude Pro"). The patch file ends with optional SQL to merge them by hand. New syncs no longer create such duplicates.
