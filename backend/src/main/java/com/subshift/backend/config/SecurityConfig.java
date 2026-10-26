@@ -44,7 +44,7 @@ public class SecurityConfig {
                                 "/health", "/api/health", "/error").permitAll()
                         // Google redirects the browser here without an Authorization header;
                         // the signed "state" parameter identifies the user instead.
-                        .requestMatchers("/api/gmail/callback").permitAll()
+                        .requestMatchers("/api/gmail/callback", "/api/mail/outlook/callback").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated())
                 // Created with `new` (not a @Component) so it only runs inside the security chain.

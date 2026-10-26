@@ -33,6 +33,10 @@ public class Subscription {
     @Column(nullable = false, length = 20)
     private SubscriptionStatus status = SubscriptionStatus.ACTIVE;
 
+    /** Tier of the service, for example "Pro" or "Family". The service row itself is the brand only. */
+    @Column(name = "plan_name", length = 100)
+    private String planName;
+
     @Column(name = "last_checked_date")
     private LocalDate lastCheckedDate;
 

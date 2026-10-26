@@ -54,6 +54,20 @@ services:
         sync: false
       - key: GOOGLE_REDIRECT_URI   # https://<backend-url>/api/gmail/callback
         sync: false
+      - key: MICROSOFT_CLIENT_ID    # optional: Outlook sign-in
+        sync: false
+      - key: MICROSOFT_CLIENT_SECRET
+        sync: false
+      - key: MICROSOFT_REDIRECT_URI # https://<backend-url>/api/mail/outlook/callback
+        sync: false
+      - key: MAIL_ENABLED           # optional: "true" to email alerts over SMTP
+        value: "false"
+      - key: MAIL_HOST              # optional: SMTP server, for example smtp.gmail.com
+        sync: false
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
       - key: GEMINI_API_KEY
         sync: false
       - key: FRONTEND_URL          # https://<frontend-url>, no trailing slash

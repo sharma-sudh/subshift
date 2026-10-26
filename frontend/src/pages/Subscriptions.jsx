@@ -193,6 +193,7 @@ export default function Subscriptions() {
                             >
                               <span className="chevron" aria-hidden="true">{open ? '▾' : '▸'}</span> {s.serviceName}
                             </button>
+                            {s.planName && <span className="muted small"> · {s.planName}</span>}
                           </td>
                           <td data-label="Category">{s.category}</td>
                           <td data-label="Current price" className="num">{formatMoney(s.currentPrice)}</td>

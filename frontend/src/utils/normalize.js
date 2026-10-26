@@ -9,6 +9,7 @@ export function normalizeSubscription(r = {}) {
     serviceId: r.serviceId ?? r.service_id ?? null,
     serviceName: r.serviceName ?? r.service_name ?? 'Unknown service',
     category: r.category ?? r.categoryName ?? r.category_name ?? 'Other',
+    planName: r.planName ?? r.plan_name ?? null,
     status: r.status ?? 'ACTIVE',
     currentPrice: num(r.currentPrice ?? r.current_price ?? r.latestPrice),
     lastCheckedDate: r.lastCheckedDate ?? r.last_checked_date ?? null,

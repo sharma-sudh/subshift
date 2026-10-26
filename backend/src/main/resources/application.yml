@@ -6,6 +6,21 @@ spring:
     url: jdbc:postgresql://localhost:5432/${DB_NAME:subshift_db}
     username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD}
+  mail:
+    # SMTP for alert emails. Leave MAIL_HOST empty (and MAIL_ENABLED=false) to run without sending any email.
+    host: ${MAIL_HOST:}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+          connectiontimeout: 5000
+          timeout: 10000
+          writetimeout: 10000
   jpa:
     hibernate:
       # IMPORTANT: 'validate', not 'update' or 'create'.
@@ -27,8 +42,22 @@ google:
     client-secret: ${GOOGLE_CLIENT_SECRET:}
     redirect-uri: ${GOOGLE_REDIRECT_URI:http://localhost:8080/api/gmail/callback}
 
+# Outlook / Microsoft 365 sign-in (an Azure app registration with the Mail.Read delegated permission).
+microsoft:
+  oauth:
+    client-id: ${MICROSOFT_CLIENT_ID:}
+    client-secret: ${MICROSOFT_CLIENT_SECRET:}
+    redirect-uri: ${MICROSOFT_REDIRECT_URI:http://localhost:8080/api/mail/outlook/callback}
+    tenant: ${MICROSOFT_TENANT:common}
+
 gmail:
   token-encryption-key: ${TOKEN_ENCRYPTION_KEY}
+
+notifications:
+  email:
+    # Also email alerts (price hike / drop, possible cancellation) to the user's account address.
+    enabled: ${MAIL_ENABLED:false}
+    from: ${MAIL_FROM:}
 
 app:
   frontend-url: ${FRONTEND_URL:http://localhost:5173}

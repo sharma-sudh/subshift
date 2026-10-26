@@ -7,21 +7,23 @@ import { CategoryBarChart } from '../components/Charts';
 import { Banner, Empty, ErrorMessage, Loading } from '../components/Status';
 import { useAsync } from '../hooks/useAsync';
 import { formatMoney } from '../utils/format';
-import { gmailReasonText } from '../utils/gmailReasons';
+import { mailReasonText } from '../utils/gmailReasons';
 
 export default function Dashboard() {
   const { user } = useAuth();
   const [params, setParams] = useSearchParams();
   const [gmailNotice, setGmailNotice] = useState(null);
 
-  // Google -> backend -> here: /dashboard?gmail=connected  or  ?gmail=error&reason=...
+  // Provider -> backend -> here: /dashboard?gmail=connected, ?mail=connected&provider=outlook, or ?...=error&reason=...
   useEffect(() => {
-    const result = params.get('gmail');
+    const result = params.get('gmail') ?? params.get('mail');
     if (!result) return;
+    const provider = params.get('mail') ? params.get('provider') : 'gmail';
+    const name = provider === 'outlook' ? 'Outlook' : provider === 'gmail' ? 'Gmail' : 'Email';
     setGmailNotice(
       result === 'connected'
-        ? { kind: 'success', text: 'Gmail connected. You can now scan your inbox for renewal emails.' }
-        : { kind: 'error', text: gmailReasonText(params.get('reason')) },
+        ? { kind: 'success', text: `${name} connected. You can now scan your inbox for subscription emails.` }
+        : { kind: 'error', text: mailReasonText(params.get('reason')) },
     );
     setParams({}, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -57,7 +59,7 @@ export default function Dashboard() {
 
       {gmailNotice && (
         <Banner kind={gmailNotice.kind} onClose={() => setGmailNotice(null)}>
-          {gmailNotice.text} {gmailNotice.kind === 'success' && <Link to="/gmail">Go to Gmail scan</Link>}
+          {gmailNotice.text} {gmailNotice.kind === 'success' && <Link to="/gmail">Go to email scan</Link>}
         </Banner>
       )}
 
@@ -84,7 +86,7 @@ export default function Dashboard() {
               <Link to="/subscriptions" className="stat-note">View all</Link>
             </div>
             <div className={`stat${data.unreadAlerts > 0 ? ' stat-warn' : ''}`}>
-              <span className="stat-label">Unread price-hike alerts</span>
+              <span className="stat-label">Unread price-change alerts</span>
               <span className="stat-value">{data.unreadAlerts}</span>
               <Link to="/alerts" className="stat-note">{data.unreadAlerts > 0 ? 'Review now' : 'Open alerts'}</Link>
             </div>
@@ -92,10 +94,10 @@ export default function Dashboard() {
 
           {subs.length === 0 ? (
             <Empty title="No subscriptions yet">
-              <p>Add one manually, or connect Gmail and let SubShift find your renewal emails.</p>
+              <p>Add one manually, or connect your email and let SubShift find your renewal emails.</p>
               <div className="row-actions center">
                 <Link to="/manual-entry" className="btn btn-primary">Add a subscription</Link>
-                <Link to="/gmail" className="btn btn-secondary">Connect Gmail</Link>
+                <Link to="/gmail" className="btn btn-secondary">Connect email</Link>
               </div>
             </Empty>
           ) : (
@@ -127,7 +129,7 @@ export default function Dashboard() {
                     <tbody>
                       {topSubs.map((s) => (
                         <tr key={s.id}>
-                          <td>{s.serviceName}</td>
+                          <td>{s.serviceName}{s.planName && <span className="muted small"> · {s.planName}</span>}</td>
                           <td>{s.category}</td>
                           <td className="num">{formatMoney(s.currentPrice)}</td>
                           <td><StatusBadge status={s.status} /></td>

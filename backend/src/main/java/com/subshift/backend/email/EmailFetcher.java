@@ -130,7 +130,7 @@ public class EmailFetcher {
         return null;
     }
 
-    private static String htmlToText(String html) {
+    public static String htmlToText(String html) {
         String text = html
                 .replaceAll("(?is)<(script|style)[^>]*>.*?</\\1>", " ")
                 .replaceAll("(?s)<[^>]+>", " ");
@@ -157,7 +157,7 @@ public class EmailFetcher {
                 .replace("&gt;", ">").replace("&quot;", "\"");
     }
 
-    private static String truncate(String s, int max) {
+    public static String truncate(String s, int max) {
         if (s == null) {
             return "";
         }

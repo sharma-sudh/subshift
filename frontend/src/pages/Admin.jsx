@@ -4,12 +4,13 @@ import ConfirmDialog from '../components/ConfirmDialog';
 import Field from '../components/Field';
 import Pagination from '../components/Pagination';
 import { Banner, ErrorMessage, Loading } from '../components/Status';
+import TrainingData from '../components/TrainingData';
 import { useAsync } from '../hooks/useAsync';
 import { hasErrors } from '../utils/validators';
 
 const PAGE_SIZE = 10;
 
-export default function Admin() {
+function CatalogTab() {
   const services = useAsync(() => api.catalog.services(), []);
   const categories = useAsync(() => api.catalog.categories(), []);
 
@@ -108,14 +109,7 @@ export default function Admin() {
   };
 
   return (
-    <div className="page">
-      <div className="page-head">
-        <div>
-          <h1>Admin: catalog</h1>
-          <p className="muted">Manage the shared list of services users can subscribe to.</p>
-        </div>
-      </div>
-
+    <>
       {message && (
         <Banner kind={message.kind} onClose={() => setMessage(null)}>
           {message.text}
@@ -275,6 +269,47 @@ export default function Admin() {
           onCancel={() => setToDelete(null)}
         />
       )}
+    </>
+  );
+}
+
+const TABS = [
+  { id: 'catalog', label: 'Catalog', title: 'Admin: catalog', blurb: 'Manage the shared list of services users can subscribe to.' },
+  { id: 'training', label: 'Training data', title: 'Admin: training data', blurb: 'Labeled emails used to train the renewal classifier.' },
+];
+
+export default function Admin() {
+  const [tab, setTab] = useState('catalog');
+  const current = TABS.find((t) => t.id === tab);
+  return (
+    <div className="page">
+      <div className="page-head">
+        <div>
+          <h1>{current.title}</h1>
+          <p className="muted">{current.blurb}</p>
+        </div>
+      </div>
+
+      <div className="tabs" role="tablist" aria-label="Admin sections">
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            role="tab"
+            id={`admin-tab-${t.id}`}
+            aria-selected={tab === t.id}
+            aria-controls="admin-tabpanel"
+            className={`tab${tab === t.id ? ' tab-active' : ''}`}
+            onClick={() => setTab(t.id)}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      <div role="tabpanel" id="admin-tabpanel" aria-labelledby={`admin-tab-${tab}`}>
+        {tab === 'catalog' ? <CatalogTab /> : <TrainingData />}
+      </div>
     </div>
   );
 }

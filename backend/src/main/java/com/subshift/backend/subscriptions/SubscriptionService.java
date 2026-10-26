@@ -29,7 +29,7 @@ public class SubscriptionService {
 
     public record SubscriptionResponse(Integer id, Integer serviceId, String serviceName, String category,
                                        SubscriptionStatus status, BigDecimal currentPrice,
-                                       LocalDate lastCheckedDate, LocalDateTime createdAt) {}
+                                       LocalDate lastCheckedDate, LocalDateTime createdAt, String planName) {}
 
     public record PricePoint(BigDecimal price, LocalDate dateRecorded) {}
 
@@ -93,6 +93,6 @@ public class SubscriptionService {
                 .map(PriceLog::getPrice).orElse(null);
         return new SubscriptionResponse(s.getId(), s.getService().getId(), s.getService().getName(),
                 s.getService().getCategory().getName(), s.getStatus(), currentPrice,
-                s.getLastCheckedDate(), s.getCreatedAt());
+                s.getLastCheckedDate(), s.getCreatedAt(), s.getPlanName());
     }
 }
