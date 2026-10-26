@@ -192,9 +192,15 @@ export const gmail = {
     request(`/api/email/sync?limit=${encodeURIComponent(limit)}`, {
       method: 'POST',
       messages: {
+<<<<<<< HEAD
         409: 'No mailbox is connected (or the connection has expired). Connect your email first.',
         503: 'Email sync is not configured on the server (Gemini API key missing).',
         502: 'Your mail provider or Gemini failed while syncing. Please try again.',
+=======
+        409: 'Gmail is not connected (or the connection has expired). Connect Gmail first.',
+        503: 'Email sync is not configured on the server (Gemini API key missing).',
+        502: 'Google or Gemini failed while syncing. Please try again.',
+>>>>>>> 6b6bd0521eb4946bb2bef89b191da62c145f2505
       },
     }),
   scan: (limit) =>
@@ -243,4 +249,8 @@ export const admin = {
   },
 };
 
+<<<<<<< HEAD
 export const api = { auth, catalog, subscriptions, alerts, notifications, dashboard, mail, gmail, admin };
+=======
+export const api = { auth, catalog, subscriptions, alerts, notifications, dashboard, gmail, admin };
+>>>>>>> 6b6bd0521eb4946bb2bef89b191da62c145f2505

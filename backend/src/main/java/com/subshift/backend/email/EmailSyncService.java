@@ -139,7 +139,11 @@ public class EmailSyncService {
         SyncReport saved = persister.persist(user.getId(), items, newLastSynced);
         return new SyncReport(processed, ids.size() - processed, stopReason != null, stopReason,
                 saved.pricesRecorded(), saved.hikesNotified(), saved.dropsNotified(), saved.newSubscriptions(),
+<<<<<<< HEAD
                 saved.newServices(), saved.ignoredNonSubscription(), saved.lastSyncedAt(), saved.outcomes());
+=======
+                saved.newServices(), saved.lastSyncedAt(), saved.outcomes());
+>>>>>>> 6b6bd0521eb4946bb2bef89b191da62c145f2505
     }
 
     private static LocalDateTime toLocal(Instant instant) {

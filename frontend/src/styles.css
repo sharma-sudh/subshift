@@ -1168,6 +1168,7 @@ textarea {
     margin-bottom: 0.2rem;
   }
 }
+<<<<<<< HEAD
 
 /* ---------- Email provider choice ---------- */
 .provider-grid {
@@ -1196,3 +1197,5 @@ textarea {
 .provider-card .field {
   width: 100%;
 }
+=======
+>>>>>>> 6b6bd0521eb4946bb2bef89b191da62c145f2505
