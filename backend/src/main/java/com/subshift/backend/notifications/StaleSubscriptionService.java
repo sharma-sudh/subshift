@@ -1,5 +1,6 @@
 package com.subshift.backend.notifications;
 
+import com.subshift.backend.common.AppTime;
 import com.subshift.backend.notifications.dto.StaleCheckResult;
 import com.subshift.backend.subscriptions.Subscription;
 import com.subshift.backend.subscriptions.SubscriptionRepository;
@@ -34,7 +35,7 @@ public class StaleSubscriptionService {
 
     @Transactional
     public StaleCheckResult run(int staleDays) {
-        LocalDate cutoff = LocalDate.now().minusDays(staleDays);
+        LocalDate cutoff = AppTime.today().minusDays(staleDays);
         LocalDateTime windowStart = LocalDateTime.now().minusDays(DEDUP_WINDOW_DAYS);
 
         List<Subscription> stale = subscriptionRepository.findStale(SubscriptionStatus.ACTIVE, cutoff);

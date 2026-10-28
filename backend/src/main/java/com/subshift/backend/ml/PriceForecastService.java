@@ -1,5 +1,6 @@
 package com.subshift.backend.ml;
 
+import com.subshift.backend.common.AppTime;
 import com.subshift.backend.common.CurrentUserService;
 import com.subshift.backend.pricelog.PriceLog;
 import com.subshift.backend.pricelog.PriceLogRepository;
@@ -139,8 +140,8 @@ public class PriceForecastService {
         LocalDate lastChange = dates.get(dates.size() - 1);
         LocalDate expected = lastChange.plusDays(Math.round(prediction.months() * 30.4375));
         String note = "Rough estimate from this subscription's price history and the typical gaps and increases seen across services.";
-        if (expected.isBefore(LocalDate.now())) {
-            expected = LocalDate.now().plusDays(30);
+        if (expected.isBefore(AppTime.today())) {
+            expected = AppTime.today().plusDays(30);
             note = "A change looks overdue compared with the usual gap. Rough estimate from this subscription's price "
                     + "history and the typical gaps and increases seen across services.";
         }

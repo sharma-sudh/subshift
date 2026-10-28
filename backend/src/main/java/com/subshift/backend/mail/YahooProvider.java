@@ -1,5 +1,6 @@
 package com.subshift.backend.mail;
 
+import com.subshift.backend.common.AppTime;
 import com.subshift.backend.email.EmailFetcher;
 import com.subshift.backend.email.EmailFetcher.FetchedEmail;
 import com.subshift.backend.email.EmailProperties;
@@ -30,7 +31,6 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
 import java.time.Instant;
-import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -173,7 +173,7 @@ public class YahooProvider implements MailProvider {
                 }
                 Object from = message.getFrom() == null || message.getFrom().length == 0 ? "" : message.getFrom()[0];
                 return new FetchedEmail(id, message.getSubject() == null ? "" : message.getSubject(),
-                        String.valueOf(from), received.atZone(ZoneId.systemDefault()).toLocalDate(), received,
+                        String.valueOf(from), AppTime.dateOf(received), received,
                         EmailFetcher.truncate(bodyText(message), props.maxBodyChars()));
             } catch (MessagingException | IOException | NumberFormatException e) {
                 throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Yahoo Mail returned an error");

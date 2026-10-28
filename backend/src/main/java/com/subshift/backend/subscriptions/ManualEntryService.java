@@ -1,5 +1,6 @@
 package com.subshift.backend.subscriptions;
 
+import com.subshift.backend.common.AppTime;
 import com.subshift.backend.catalog.ServiceRepository;
 import com.subshift.backend.pricelog.PriceLog;
 import com.subshift.backend.pricelog.PriceSource;
@@ -42,7 +43,7 @@ public class ManualEntryService {
         com.subshift.backend.catalog.Service service = serviceRepository.findById(request.serviceId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Service not found"));
 
-        LocalDate today = LocalDate.now();
+        LocalDate today = AppTime.today();
 
         // 2. Find or create the subscription for this user + service
         Optional<Subscription> existing =

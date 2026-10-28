@@ -88,3 +88,9 @@ Base URL (development): `http://localhost:8080`. All request and response bodies
 - **Spend tiers:** k-means runs on the log of each active subscription's latest price, trying 2, 3 and 4 tiers and keeping the best silhouette score. Prices are treated as monthly, like the rest of the dashboard.
 - **What the email sync saves:** only emails Gemini marks as a renewal, whose payment did not fail (`paymentFailed` false) and which repeat on a schedule (`recurring` true). `recurring` is also forced to false in code unless the email text mentions repeating billing (subscription, renew, monthly, per month and similar), because the model sometimes calls a one-off purchase recurring. Other outcomes are `skipped_payment_failed` and `skipped_not_recurring`. `/api/email/scan` shows both flags for each email.
 - **Frontend route guards:** show admin pages only when the role decoded from the token is `ADMIN`. The backend enforces the same rule regardless.
+
+## Time zones
+
+- Timestamps (`createdAt`, `sentAt`, `detectedAt`, `connectedAt`, `lastSyncedAt`, ...) are stored and returned in UTC, as zone-less ISO strings such as `2026-10-11T12:00:00`. The JVM, Hibernate and the database session are all pinned to UTC. Timestamps that carry a zone (`trainedAt`, ending in `Z`) are also UTC.
+- The frontend shows every timestamp in India time (IST, `Asia/Kolkata`).
+- Calendar dates (`lastCheckedDate`, `emailDate`, "today" for manual entries) are India dates; the server uses `AppTime.today()` / `AppTime.dateOf(...)`.

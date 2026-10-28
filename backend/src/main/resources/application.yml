@@ -6,6 +6,9 @@ spring:
     url: jdbc:postgresql://localhost:5432/${DB_NAME:subshift_db}
     username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD}
+    hikari:
+      # Make NOW() defaults in schema.sql UTC too, so every stored timestamp is UTC (the frontend shows IST).
+      connection-init-sql: SET TIME ZONE 'UTC'
   mail:
     # SMTP for alert emails. Leave MAIL_HOST empty (and MAIL_ENABLED=false) to run without sending any email.
     host: ${MAIL_HOST:}
@@ -31,6 +34,8 @@ spring:
     properties:
       hibernate:
         format_sql: true
+        jdbc:
+          time_zone: UTC
 
 jwt:
   secret: ${JWT_SECRET}
