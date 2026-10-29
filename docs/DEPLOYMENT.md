@@ -70,3 +70,5 @@ Invoke-RestMethod https://<backend-url>/api/health
    - **Alert emails:** set `MAIL_ENABLED=true`, `MAIL_HOST`, `MAIL_USERNAME`, `MAIL_PASSWORD` (and `MAIL_PORT` if not 587).
 3. Heads-up on SMTP from Render's free tier: as far as I know, free web services block outbound SMTP on the usual ports (25, 465, 587). Check Render's current docs. If your messages time out, try a provider that accepts port 2525, upgrade the plan, or demo alert emails from a local run (`MAIL_*` in `backend/.env`).
 4. Services created before this change can include plan variants as separate rows (for example "Claude" and "Claude Pro"). The patch file ends with optional SQL to merge them by hand. New syncs no longer create such duplicates.
+5. Apply the stored-procedure patch the same way, before deploying the backend version that calls it:
+   `psql -h <external-host> -U subshift -d subshift_db -v ON_ERROR_STOP=1 -f db/patches/2026-10-30_stored_procedure.sql`

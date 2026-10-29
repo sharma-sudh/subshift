@@ -1,6 +1,6 @@
 # SubShift Data Dictionary
 
-This document describes every table and column in the SubShift PostgreSQL database, plus its constraints, defaults, indexes, view, function and trigger. It matches `db/schema.sql`, which is the source of truth for the schema.
+This document describes every table and column in the SubShift PostgreSQL database, plus its constraints, defaults, indexes, view, function, stored procedure and trigger. It matches `db/schema.sql`, which is the source of truth for the schema.
 
 **Key:** PK = Primary Key, FK = Foreign Key, UQ = Unique.
 
@@ -252,3 +252,13 @@ Example: `SELECT * FROM get_user_spend_summary(1);`
 Fires `AFTER INSERT` on `price_log`, once for each new row, and runs the function `flag_price_hike()`. The function finds the previous price for the same subscription (the most recent other row, ordered by `date_recorded` and then by `id` so same-day changes are ordered correctly). If there is a previous price and the new price is different, higher or lower, it inserts a row into `alerts` with the old and new prices. Nothing is written for a first price. The view and the spend function use the same ordering for the latest price.
 
 The application never inserts alerts itself. All price-change alerts (hikes and drops) come from this trigger. The trigger and function names were kept from when it only flagged increases.
+
+---
+
+## Stored procedure: mark_all_alerts_read(p_user_id INT)
+
+Sets `is_read = TRUE` on every unread alert that belongs to the given user (found by joining `alerts` to `subscriptions`), in one statement. It returns nothing. The backend calls it from `PATCH /api/alerts/read-all`, and the Alerts page uses that endpoint for its "Mark all as read" button on the Price changes tab.
+
+Example: `CALL mark_all_alerts_read(1);`
+
+The trigger, function and procedure are tested by `db/tests/trigger_and_procedure_test.sql`, which runs in CI.

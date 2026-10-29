@@ -37,6 +37,7 @@ Base URL (development): `http://localhost:8080`. All request and response bodies
 | POST | `/api/subscriptions/manual` | Body `{serviceId, price, dateRecorded}`. Creates the subscription if needed and records the price when it changed. `201` if the subscription was new, otherwise `200`. |
 | GET | `/api/alerts` | Price-hike alerts, newest first: `{id, serviceName, oldPrice, newPrice, detectedAt, isRead}`. |
 | PATCH | `/api/alerts/{id}/read` | Mark one alert as read. |
+| PATCH | `/api/alerts/read-all` | Mark every unread alert of the signed-in user as read in one call (runs the `mark_all_alerts_read` stored procedure). Returns `{updated}`, the number that were unread. |
 | GET | `/api/notifications` | Notifications, newest first: `{id, type, message, sentAt, isRead}`. Type is `PRICE_HIKE`, `PRICE_DROP` or `POSSIBLE_CANCELLATION`. |
 | PATCH | `/api/notifications/{id}/read` | Mark one notification as read. |
 | GET | `/api/dashboard/summary` | `{totalMonthlySpend, categoryBreakdown: [{category, amount}], subscriptions: [...]}`. |

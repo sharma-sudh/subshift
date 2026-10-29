@@ -2,6 +2,13 @@
 
 A subscription price-drift tracker. SubShift helps users keep track of their recurring subscriptions, detects when a service quietly raises its price, and alerts them so they can decide whether to keep or cancel.
 
+## Live Demo
+
+- Frontend: https://subshift-nine.vercel.app
+- Backend API: https://subshift-backend.onrender.com (health check: `/api/health`)
+
+The backend runs on Render's free tier, so it sleeps after 15 minutes without traffic. The first request can take about a minute while it wakes up.
+
 ## Project Description
 
 Many people pay for several subscriptions (streaming, productivity tools, fitness apps, utilities) and rarely notice when the price goes up. SubShift solves this by recording the price of each subscription over time and flagging any increase.
@@ -17,6 +24,8 @@ Many people pay for several subscriptions (streaming, productivity tools, fitnes
 - **Price forecast:** predicts a subscription's next price change and roughly when it will happen, from its recorded price history.
 - **Dashboard and insights:** monthly spend summary, category breakdown, price history charts, and spend clustering.
 - **Admin panel:** admins manage the catalog of services and categories.
+- **Multiple mailboxes:** connect Gmail, Outlook (OAuth) or Yahoo Mail (app password).
+- **Alert emails:** price changes and possible cancellations can also be emailed over SMTP.
 
 ## Tech Stack
 
@@ -29,6 +38,8 @@ Many people pay for several subscriptions (streaming, productivity tools, fitnes
 | Frontend | React (Vite), React Router, Recharts |
 | External APIs | Google OAuth 2.0 and Gmail API, Gemini API |
 | Machine Learning | Written in plain Java with no external ML library: email classifier (TF-IDF features with logistic regression and Naive Bayes), price forecast (ridge regression) and spend clustering (k-means) |
+| Containers | Docker (multi-stage backend image) and Docker Compose |
+| Testing and CI | JUnit 5 unit tests, SQL tests for the trigger and stored procedure, GitHub Actions |
 | Deployment | Render (backend and PostgreSQL database), Vercel (frontend) |
 
 ## Prerequisites
@@ -50,7 +61,6 @@ The `psql`, `pg_dump` and `pg_restore` commands used below must work in your ter
 ```bash
 git clone https://github.com/sharma-sudh/subshift.git
 cd subshift
-git checkout dev
 ```
 
 ### 2. Set up the database
@@ -196,7 +206,44 @@ Then log in as `demo@subshift.test` (user) or `admin@subshift.test` (admin) with
 
 ### Tests and build check
 
-There are no automated tests yet. API test examples are in `docs/MANUAL_ENTRY_API_TESTS.md`. To check that everything builds, run `mvn -DskipTests package` in `backend` and `npm run build` in `frontend`. The same checks run automatically on GitHub Actions (`.github/workflows/ci.yml`) for pushes and pull requests to `main` and `dev`.
+There are two kinds of automated tests.
+
+**Java unit tests** (JUnit 5, no database needed). They cover JWT creation and validation, the email text preprocessing, the TF-IDF classifiers, ridge regression, k-means clustering and service-name matching. Run them from `backend`:
+
+```bash
+cd backend
+mvn test
+```
+
+**Database tests** for the price-change trigger, the spend-summary function and the `mark_all_alerts_read` stored procedure. They run in one transaction that is rolled back, so they leave no data behind. Run them against a database that has `schema.sql` loaded:
+
+```bash
+psql -U postgres -d subshift_db -v ON_ERROR_STOP=1 -f db/tests/trigger_and_procedure_test.sql
+```
+
+It prints `All database tests passed` on success. API request examples are in `docs/MANUAL_ENTRY_API_TESTS.md`. To check that everything builds, run `mvn -DskipTests package` in `backend` and `npm run build` in `frontend`. GitHub Actions (`.github/workflows/ci.yml`) runs the schema, the database tests, the backend build with unit tests, a smoke test, the frontend build and a Docker image build on pushes and pull requests to `main` and `dev`.
+
+## Run with Docker
+
+This starts the backend and a PostgreSQL 15 database in containers. The schema is loaded automatically the first time the database starts. Docker Desktop (or Docker Engine with the Compose plugin) is the only thing you need to install.
+
+```bash
+cp docker.env.example .env      # PowerShell: Copy-Item docker.env.example .env
+```
+
+Open `.env` and set `DB_PASSWORD`, `JWT_SECRET` (at least 32 characters) and `TOKEN_ENCRYPTION_KEY` (base64 of 32 random bytes). The commands to generate the two secrets are in the Installation section. Then:
+
+```bash
+docker compose up --build
+```
+
+Check `http://localhost:8080/api/health`. Start the frontend as in the Execution steps (`npm run dev` in `frontend`); it talks to the backend on port 8080. To stop, press Ctrl+C or run `docker compose down`. To also delete the database volume and start over, run `docker compose down -v`.
+
+The backend image is published on Docker Hub: https://hub.docker.com/r/sudh14/subshift-backend. To pull it instead of building it:
+
+```bash
+docker pull sudh14/subshift-backend:latest
+```
 
 ## Database Backup and Restore
 
@@ -257,18 +304,19 @@ psql -U postgres -d subshift_restore_sql -f backup.sql
 │       └── resources/application.yml
 ├── frontend/         React + Vite app
 │   └── src/  api/  auth/  components/  hooks/  pages/  utils/
-├── db/schema.sql     Tables, view, function and trigger
-├── data/             Classifier training data and price-history generator
-├── docs/             API reference, data dictionary, API tests, deployment and security notes, ER diagram, proposal
+├── db/               schema.sql (tables, view, function, stored procedure, trigger), patches/, tests/, demo_seed.sql
+├── data/             Classifier training data and price-history sources
+├── docs/             API reference, data dictionary, ER diagram, relational schema, API tests, deployment and security notes, proposal
+├── docker-compose.yml  Backend and PostgreSQL in containers
 ├── render.yaml       Render deployment blueprint
 └── .github/workflows/  CI workflow
 ```
 
 ## Team
 
-- Sudhanshu: backend core, ML, security
-- Teammate 1: React frontend
-- Teammate 2: backend support, data labeling, docs
+- Sudhanshu Sharma: schema design, backend core, ML components, RBAC, security
+- Ayush Garg: React frontend
+- Saksham Goyal: manual-entry endpoint, classifier training-data labeling, documentation
 
 ## License
 
