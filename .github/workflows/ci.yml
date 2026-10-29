@@ -40,7 +40,13 @@ jobs:
           PGPASSWORD: postgres
         run: psql -h localhost -U postgres -d subshift_db -v ON_ERROR_STOP=1 -f db/schema.sql
 
-      - name: Build backend
+      # Checks the price-change trigger, the spend function and the mark_all_alerts_read stored procedure.
+      - name: Database tests (trigger and stored procedure)
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d subshift_db -v ON_ERROR_STOP=1 -f db/tests/trigger_and_procedure_test.sql
+
+      - name: Build backend and run unit tests
         working-directory: backend
         run: mvn -B package
 
@@ -85,3 +91,11 @@ jobs:
 
       - run: npm ci
       - run: npm run build
+
+  docker:
+    name: Docker image build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the backend image
+        run: docker build -t subshift-backend:ci ./backend

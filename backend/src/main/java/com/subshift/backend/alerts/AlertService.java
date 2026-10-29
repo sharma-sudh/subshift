@@ -43,4 +43,15 @@ public class AlertService {
         alert.setIsRead(true);
         return AlertResponse.from(alert);
     }
+
+    /** Marks all of the user's unread alerts as read with one stored-procedure call. Returns how many were unread. */
+    @Transactional
+    public int markAllRead(String email) {
+        User user = currentUserService.require(email);
+        long unread = alertRepository.countUnread(user.getId());
+        if (unread > 0) {
+            alertRepository.markAllReadViaProcedure(user.getId());
+        }
+        return (int) unread;
+    }
 }

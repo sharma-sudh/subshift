@@ -92,6 +92,8 @@ export const subscriptions = {
 export const alerts = {
   list: async () => list(await request('/api/alerts')).map(normalizeAlert),
   markRead: async (id) => normalizeAlert(await request(`/api/alerts/${id}/read`, { method: 'PATCH' })),
+  /** One call that marks every unread price-change alert as read (stored procedure on the server). */
+  markAllRead: () => request('/api/alerts/read-all', { method: 'PATCH' }),
 };
 
 export const notifications = {
