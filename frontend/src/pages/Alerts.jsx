@@ -37,6 +37,16 @@ export default function Alerts() {
   const markAllRead = async () => {
     const unread = (current.data ?? []).filter((i) => !i.isRead);
     setMessage(null);
+    if (tab === 'changes') {
+      // Price-change alerts: a single request, handled by a stored procedure on the server.
+      try {
+        await api.alerts.markAllRead();
+        current.setData((list) => (list ?? []).map((i) => ({ ...i, isRead: true })));
+      } catch (e) {
+        setMessage({ kind: 'error', text: e.message });
+      }
+      return;
+    }
     const results = await Promise.allSettled(unread.map((i) => markReadFn(i.id)));
     const okIds = new Set(unread.filter((_, idx) => results[idx].status === 'fulfilled').map((i) => i.id));
     current.setData((list) => (list ?? []).map((i) => (okIds.has(i.id) ? { ...i, isRead: true } : i)));

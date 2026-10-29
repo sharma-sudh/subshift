@@ -1,0 +1,49 @@
+# Runs SubShift's backend and its PostgreSQL database in Docker.
+#   1. cp docker.env.example .env      (then fill in the secrets; .env is git-ignored)
+#   2. docker compose up --build
+#   3. open http://localhost:8080/api/health
+# The database is created empty and db/schema.sql is applied automatically the first time it starts.
+# To start again from scratch: docker compose down -v
+
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: subshift_db
+      POSTGRES_USER: subshift
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U subshift -d subshift_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    # Name used when you run "docker compose build" and "docker compose push" (see README, Docker section).
+    image: ${DOCKERHUB_USER:-sudh14}/subshift-backend:latest
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_NAME: subshift_db
+      DB_USERNAME: subshift
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
+      TOKEN_ENCRYPTION_KEY: ${TOKEN_ENCRYPTION_KEY:?Set TOKEN_ENCRYPTION_KEY in .env}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-http://localhost:8080/api/gmail/callback}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+
+volumes:
+  pgdata:

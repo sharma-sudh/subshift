@@ -29,6 +29,7 @@ erDiagram
         string email
         string password_hash
         int role_id FK
+        boolean email_alerts_enabled
         timestamp created_at
     }
 
@@ -47,8 +48,11 @@ erDiagram
     GMAIL_CONNECTIONS {
         int id PK
         int user_id FK
+        string provider
+        string mailbox_address
         string access_token_encrypted
         string refresh_token_encrypted
+        string app_password_encrypted
         timestamp connected_at
         timestamp last_synced_at
     }
@@ -58,6 +62,7 @@ erDiagram
         int user_id FK
         int service_id FK
         string status
+        string plan_name
         date last_checked_date
         timestamp created_at
     }
@@ -103,6 +108,13 @@ erDiagram
 **Tables (8+, per rubric):** 10 total
 
 ## Notes on cardinality choices
-- `USERS ||--o| GMAIL_CONNECTIONS` — one-to-zero-or-one: a user may or may not have connected Gmail yet
+- `USERS ||--o| GMAIL_CONNECTIONS` — one-to-zero-or-one: a user may or may not have connected a mailbox yet. The table keeps its original name but now holds Gmail, Outlook and Yahoo connections (the `provider` column says which)
 - `PRICE_LOG ||--o| ALERTS` — zero-or-one: most price_log rows never trigger an alert (only ones where the price changed)
 - `ROLES ||--o{ USERS` — one role can apply to many users; this is the RBAC mechanism (single `users` table, role via FK — never separate per-role tables, per the rubric's explicit warning)
+- `SERVICES ||--o{ SUBSCRIPTIONS` — a service row is only the brand (for example Claude). The tier (Pro, Plus, Family) is `subscriptions.plan_name`, so different plans of one service are not separate services
+
+## Database programs (see `db/schema.sql`)
+- **View:** `active_subscriptions_overview` (joins subscriptions, services, categories and the latest price)
+- **Function:** `get_user_spend_summary(user_id)` (spend per category, aggregate query)
+- **Stored procedure:** `mark_all_alerts_read(user_id)`
+- **Trigger:** `trg_flag_price_hike` on `price_log` (creates an alert when a new price differs from the previous one)

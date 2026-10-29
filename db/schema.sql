@@ -217,3 +217,23 @@ CREATE TRIGGER trg_flag_price_hike
 AFTER INSERT ON price_log
 FOR EACH ROW
 EXECUTE FUNCTION flag_price_hike();
+
+-- ============================================================
+-- STORED PROCEDURE — marks every unread price-change alert of one user as read in a single statement
+-- (called by the backend endpoint PATCH /api/alerts/read-all)
+-- ============================================================
+
+CREATE OR REPLACE PROCEDURE mark_all_alerts_read(p_user_id INT)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    UPDATE alerts a
+    SET is_read = TRUE
+    FROM subscriptions s
+    WHERE a.subscription_id = s.id
+      AND s.user_id = p_user_id
+      AND a.is_read = FALSE;
+END;
+$$;
+
+-- Example call: CALL mark_all_alerts_read(1);

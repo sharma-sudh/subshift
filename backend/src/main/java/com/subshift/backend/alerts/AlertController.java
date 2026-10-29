@@ -6,6 +6,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/alerts")
@@ -22,5 +23,11 @@ public class AlertController {
     @PatchMapping("/{id}/read")
     public AlertResponse markRead(@PathVariable Integer id, Authentication authentication) {
         return alertService.markRead(authentication.getName(), id);
+    }
+
+    /** Marks every unread alert of the signed-in user as read (uses the mark_all_alerts_read stored procedure). */
+    @PatchMapping("/read-all")
+    public Map<String, Integer> markAllRead(Authentication authentication) {
+        return Map.of("updated", alertService.markAllRead(authentication.getName()));
     }
 }
