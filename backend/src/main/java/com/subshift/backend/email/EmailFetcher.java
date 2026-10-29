@@ -1,5 +1,6 @@
 package com.subshift.backend.email;
 
+import com.subshift.backend.common.AppTime;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.subshift.backend.common.RestClients;
 import lombok.extern.slf4j.Slf4j;
@@ -16,7 +17,6 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
@@ -92,7 +92,7 @@ public class EmailFetcher {
         JsonNode payload = message.path("payload");
         long internalDate = message.path("internalDate").asLong(0);
         Instant receivedAt = internalDate > 0 ? Instant.ofEpochMilli(internalDate) : Instant.now();
-        LocalDate date = receivedAt.atZone(ZoneId.systemDefault()).toLocalDate();
+        LocalDate date = AppTime.dateOf(receivedAt);
         return new FetchedEmail(id, header(payload, "Subject"), header(payload, "From"), date, receivedAt,
                 truncate(extractBody(payload), props.maxBodyChars()));
     }

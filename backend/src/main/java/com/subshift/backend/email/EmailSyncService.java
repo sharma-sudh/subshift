@@ -20,6 +20,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -40,7 +41,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public class EmailSyncService {
 
     private static final int MAX_CANDIDATES = 100;
-    private static final ZoneId ZONE = ZoneId.systemDefault();
+    /** last_synced_at is a zone-less timestamp stored in UTC (see AppTime). */
+    private static final ZoneId ZONE = ZoneOffset.UTC;
 
     private final Set<Integer> running = ConcurrentHashMap.newKeySet();
 

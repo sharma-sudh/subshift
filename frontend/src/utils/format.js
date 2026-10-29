@@ -8,42 +8,59 @@ export function formatMoney(value) {
   return Number.isInteger(n) ? inr0.format(n) : inr2.format(n);
 }
 
-/** Parses "YYYY-MM-DD" as a LOCAL date (new Date("2026-01-15") would be UTC and can shift a day). */
+/** Everything the user sees is in India time. */
+export const APP_TIME_ZONE = 'Asia/Kolkata';
+
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+const HAS_ZONE = /(Z|[+-]\d{2}:?\d{2})$/i;
+
+/**
+ * Parses an API value into a Date.
+ * - "YYYY-MM-DD" is a calendar date: read as a LOCAL date (new Date("2026-01-15") would be UTC and can shift a day).
+ * - A timestamp WITHOUT a zone (the API sends created_at, sent_at, ... like "2026-10-11T12:00:00") is stored in UTC,
+ *   so a "Z" is added; browsers would otherwise read it as local time.
+ * - A timestamp with a zone ("...Z" or "+05:30") is used as is.
+ */
 export function parseDate(value) {
   if (!value) return null;
-  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+  if (typeof value === 'string' && DATE_ONLY.test(value)) {
     const [y, m, d] = value.split('-').map(Number);
     return new Date(y, m - 1, d);
   }
-  const d = new Date(value); // LocalDateTime strings like 2026-10-11T12:00:00 are read as local time
+  const text = typeof value === 'string' && !HAS_ZONE.test(value) ? `${value}Z` : value;
+  const d = new Date(text);
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
+/** A calendar date such as "15 Jan 2026". Timestamps are shown as the date in India. */
 export function formatDate(value) {
   const d = parseDate(value);
-  return d ? d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+  if (!d) return '—';
+  const timeZone = typeof value === 'string' && DATE_ONLY.test(value) ? undefined : APP_TIME_ZONE;
+  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone });
 }
 
+/** A timestamp in India time, e.g. "11 Oct 2026, 5:30 pm IST". */
 export function formatDateTime(value) {
+  if (typeof value === 'string' && DATE_ONLY.test(value)) return formatDate(value);
   const d = parseDate(value);
-  return d
-    ? d.toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' })
-    : '—';
+  if (!d) return '—';
+  const text = d.toLocaleString('en-IN', {
+    day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: APP_TIME_ZONE,
+  });
+  return `${text} IST`;
 }
 
-/** Today as "YYYY-MM-DD" in the user's local timezone. */
+/** Today as "YYYY-MM-DD" in India time (matches the server's idea of today). */
 export function todayISO() {
-  const d = new Date();
-  const pad = (n) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  return new Intl.DateTimeFormat('en-CA', { timeZone: APP_TIME_ZONE, year: 'numeric', month: '2-digit', day: '2-digit' })
+    .format(new Date());
 }
 
 export function daysSince(value) {
   const d = parseDate(value);
   if (!d) return null;
-  const startOfToday = new Date();
-  startOfToday.setHours(0, 0, 0, 0);
-  return Math.floor((startOfToday - d) / 86_400_000);
+  return Math.round((parseDate(todayISO()) - d) / 86_400_000);
 }
 
 /** Percent change from old to new, e.g. 199 -> 249 = 25.1 */

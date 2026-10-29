@@ -12,18 +12,16 @@ import java.util.Random;
 
 /**
  * Grouped k-fold cross-validation: every service's history sits in exactly one fold, so each prediction
- * comes from a model that never saw that service. Errors are reported on the price scale (rupees), as
+ * comes from a model that never saw that service. The number of folds is capped at the number of services, so
+ * with little data this becomes leave-one-service-out. Errors are reported on the price scale (rupees), as
  * percentage points of growth, and (for timing) in months.
  */
 public final class PriceModelEvaluator {
 
     public record Score(String name, double rmseRupees, double maeRupees, double rmseGrowthPoints, double maeMonths) {}
 
-    public record Evaluation(List<Score> scores, int transitions, int groups,
-                             /** Ridge vs "no change" RMSE using only real (non-synthetic) examples, or null if there are too few. */
-                             Double realRidgeRmse, Double realNoChangeRmse, int realTransitions) {}
+    public record Evaluation(List<Score> scores, int transitions, int groups, int folds) {}
 
-    private static final int MIN_REAL_FOR_REPORT = 5;
     private static final String[] NAMES = {"Ridge regression", "No change", "Repeat last increase", "Average increase"};
 
     private PriceModelEvaluator() {}
@@ -31,6 +29,7 @@ public final class PriceModelEvaluator {
     public static Evaluation crossValidate(List<Transition> all, int folds, long seed) {
         List<String> groups = new ArrayList<>(new LinkedHashSet<>(all.stream().map(t -> t.series().group()).toList()));
         Collections.shuffle(groups, new Random(seed));
+        folds = Math.max(1, Math.min(folds, groups.size()));
         Map<String, Integer> foldOf = new HashMap<>();
         for (int i = 0; i < groups.size(); i++) foldOf.put(groups.get(i), i % folds);
 
@@ -72,19 +71,6 @@ public final class PriceModelEvaluator {
             scores.add(new Score(NAMES[m], Math.sqrt(sq / n), abs / n, 100.0 * Math.sqrt(sqGrowth / n), absMonths / n));
         }
 
-        int real = 0;
-        double ridgeSq = 0, noChangeSq = 0;
-        for (int i = 0; i < n; i++) {
-            Transition t = all.get(i);
-            if (t.series().synthetic()) continue;
-            real++;
-            double a = t.price() * Math.exp(predictedGrowth[0][i]) - t.nextPrice();
-            double b = t.price() - t.nextPrice();
-            ridgeSq += a * a;
-            noChangeSq += b * b;
-        }
-        Double realRidge = real >= MIN_REAL_FOR_REPORT ? Math.sqrt(ridgeSq / real) : null;
-        Double realNoChange = real >= MIN_REAL_FOR_REPORT ? Math.sqrt(noChangeSq / real) : null;
-        return new Evaluation(scores, n, groups.size(), realRidge, realNoChange, real);
+        return new Evaluation(scores, n, groups.size(), folds);
     }
 }

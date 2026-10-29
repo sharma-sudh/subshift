@@ -18,13 +18,14 @@ import java.util.Map;
 
 /**
  * Collects the price histories the forecast model trains on: every real subscription's price_log, plus the
- * synthetic histories shipped in src/main/resources/ml (see data/generate_price_history.py).
+ * real price histories bundled in src/main/resources/ml (prices in rupees; sources and dates are listed per row
+ * in data/price_history_sources.csv). No generated data is used.
  */
 @Slf4j
 @Component
 public class PriceTrainingData {
 
-    private static final String SYNTHETIC_RESOURCE = "ml/price_history_synthetic.csv";
+    private static final String BUNDLED_RESOURCE = "ml/price_history_real_inr.csv";
 
     private final JdbcTemplate jdbc;
 
@@ -34,7 +35,7 @@ public class PriceTrainingData {
 
     public List<PriceSeries> loadAll() {
         List<PriceSeries> all = new ArrayList<>(loadReal());
-        all.addAll(loadSynthetic());
+        all.addAll(loadBundled());
         return all;
     }
 
@@ -53,7 +54,7 @@ public class PriceTrainingData {
                     Builder builder = builders.computeIfAbsent(rs.getInt("subscription_id"),
                             id -> {
                                 try {
-                                    return new Builder("real-service-" + rs.getInt("service_id"), rs.getString("category"), false);
+                                    return new Builder("real-service-" + rs.getInt("service_id"), rs.getString("category"));
                                 } catch (SQLException e) {
                                     throw new RuntimeException(e);
                                 }
@@ -63,10 +64,11 @@ public class PriceTrainingData {
         return builders.values().stream().map(Builder::build).toList();
     }
 
-    List<PriceSeries> loadSynthetic() {
+    /** The bundled real price histories: one series per service, one cross-validation group per service. */
+    List<PriceSeries> loadBundled() {
         Map<String, Builder> builders = new LinkedHashMap<>();
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(
-                new ClassPathResource(SYNTHETIC_RESOURCE).getInputStream(), StandardCharsets.UTF_8))) {
+                new ClassPathResource(BUNDLED_RESOURCE).getInputStream(), StandardCharsets.UTF_8))) {
             reader.readLine(); // header: service,category,date,price
             String line;
             while ((line = reader.readLine()) != null) {
@@ -74,11 +76,11 @@ public class PriceTrainingData {
                 if (parts.length < 4) {
                     continue;
                 }
-                builders.computeIfAbsent(parts[0], name -> new Builder("synthetic-" + name, parts[1], true))
+                builders.computeIfAbsent(parts[0], name -> new Builder("bundled-" + name, parts[1]))
                         .add(LocalDate.parse(parts[2]), Double.parseDouble(parts[3]));
             }
         } catch (IOException e) {
-            log.warn("Synthetic price history not found ({}); training on real data only", SYNTHETIC_RESOURCE);
+            log.warn("Bundled price history not found ({}); training on price_log data only", BUNDLED_RESOURCE);
         }
         return builders.values().stream().map(Builder::build).toList();
     }
@@ -87,14 +89,12 @@ public class PriceTrainingData {
     private static final class Builder {
         private final String group;
         private final String category;
-        private final boolean synthetic;
         private final List<LocalDate> dates = new ArrayList<>();
         private final List<Double> prices = new ArrayList<>();
 
-        Builder(String group, String category, boolean synthetic) {
+        Builder(String group, String category) {
             this.group = group;
             this.category = category;
-            this.synthetic = synthetic;
         }
 
         void add(LocalDate date, double price) {
@@ -106,7 +106,7 @@ public class PriceTrainingData {
         }
 
         PriceSeries build() {
-            return new PriceSeries(group, category, synthetic, dates, prices);
+            return new PriceSeries(group, category, dates, prices);
         }
     }
 }

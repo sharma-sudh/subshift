@@ -8,7 +8,8 @@ import java.util.List;
 /** Turns a price history into the numbers the forecast model learns from. */
 public final class PriceFeatures {
 
-    public static final List<String> CATEGORIES = List.of("Entertainment", "Productivity", "Fitness", "Utilities", "Other");
+    /** Number of features: last growth, average growth, last gap, average gap. */
+    public static final int FEATURE_COUNT = 4;
 
     /** One training example: the history up to price index, and what the next change turned out to be. */
     public record Transition(PriceSeries series, double[] features, double price, double nextPrice,
@@ -21,9 +22,10 @@ public final class PriceFeatures {
     }
 
     /**
-     * Features describing the history through price index j (needs j >= 1, so at least two prices):
-     * log of the current price, the last log-growth, the average log-growth so far, the last gap in months,
-     * the average gap, how many changes were seen, and the category.
+     * Features describing the history through price index j (needs j >= 1, so at least two prices), using only
+     * the history's own shape so they do not depend on the currency or on a service's category:
+     * the last log-growth, the average log-growth so far, the last gap in months and the average gap.
+     * (Price level, number of changes and category were dropped: with ~30 real examples they only added noise.)
      */
     public static double[] features(PriceSeries s, int j) {
         double sumGrowth = 0;
@@ -32,15 +34,11 @@ public final class PriceFeatures {
             sumGrowth += Math.log(s.prices().get(i) / s.prices().get(i - 1));
             sumGap += monthsBetween(s.dates().get(i - 1), s.dates().get(i));
         }
-        double[] f = new double[5 + 1 + CATEGORIES.size()];
-        f[0] = Math.log(s.prices().get(j));
-        f[1] = Math.log(s.prices().get(j) / s.prices().get(j - 1));
-        f[2] = sumGrowth / j;
-        f[3] = monthsBetween(s.dates().get(j - 1), s.dates().get(j));
-        f[4] = sumGap / j;
-        f[5] = Math.min(j, 8);
-        int category = CATEGORIES.indexOf(s.category());
-        f[6 + (category < 0 ? CATEGORIES.indexOf("Other") : category)] = 1.0;
+        double[] f = new double[FEATURE_COUNT];
+        f[0] = Math.log(s.prices().get(j) / s.prices().get(j - 1));
+        f[1] = sumGrowth / j;
+        f[2] = monthsBetween(s.dates().get(j - 1), s.dates().get(j));
+        f[3] = sumGap / j;
         return f;
     }
 

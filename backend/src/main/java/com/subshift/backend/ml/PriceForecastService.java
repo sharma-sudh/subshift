@@ -1,5 +1,6 @@
 package com.subshift.backend.ml;
 
+import com.subshift.backend.common.AppTime;
 import com.subshift.backend.common.CurrentUserService;
 import com.subshift.backend.pricelog.PriceLog;
 import com.subshift.backend.pricelog.PriceLogRepository;
@@ -25,20 +26,18 @@ import java.util.Optional;
 
 /**
  * Forecasts a subscription's NEXT price change (how much, and roughly when) from its own price history.
- * The model is trained from the real price_log data plus the synthetic histories, and evaluated with
- * grouped cross-validation (see PriceModelEvaluator).
+ * The model is trained only on real data (the price_log table plus the bundled real price histories) and
+ * evaluated with grouped cross-validation against simple baselines (see PriceModelEvaluator).
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class PriceForecastService {
 
-    private static final int FOLDS = 5;
+    /** Capped at the number of services in the evaluator, so at this data size it is leave-one-service-out. */
+    private static final int FOLDS = 100;
     private static final long SEED = 42;
     private static final int MIN_TRANSITIONS = 20;
-    private static final String TRAINING_NOTE = "Trained mostly on synthetic price histories (data/generate_price_history.py). "
-            + "The RMSE shows the pipeline works; it says little about how real services behave until more real price "
-            + "changes are recorded.";
 
     public record ForecastResponse(Integer subscriptionId, String serviceName, BigDecimal currentPrice,
                                    BigDecimal predictedNextPrice, Double expectedIncreasePercent,
@@ -57,8 +56,8 @@ public class PriceForecastService {
     public void trainOnStartup() {
         try {
             PriceForecastMetrics metrics = train();
-            log.info("Price forecast model trained on {} examples ({} real)",
-                    metrics.realTransitions() + metrics.syntheticTransitions(), metrics.realTransitions());
+            log.info("Price forecast model trained on {} real examples from {} price histories",
+                    metrics.transitions(), metrics.series());
         } catch (ResponseStatusException e) {
             log.info("Price forecast model not trained at startup: {}", e.getReason());
         } catch (Exception e) {
@@ -77,17 +76,25 @@ public class PriceForecastService {
         PriceForecastModel model = new PriceForecastModel();
         model.fit(transitions);
 
-        int realTransitions = evaluation.realTransitions();
-        PriceForecastMetrics metrics = new PriceForecastMetrics(Instant.now(),
-                (int) series.stream().filter(s -> !s.synthetic()).count(),
-                (int) series.stream().filter(PriceSeries::synthetic).count(),
-                realTransitions, transitions.size() - realTransitions, FOLDS,
-                evaluation.scores().stream().map(PriceForecastService::rounded).toList(),
-                evaluation.realRidgeRmse() == null ? null : round(evaluation.realRidgeRmse()),
-                evaluation.realNoChangeRmse() == null ? null : round(evaluation.realNoChangeRmse()),
-                TRAINING_NOTE);
+        List<PriceModelEvaluator.Score> scores = evaluation.scores().stream().map(PriceForecastService::rounded).toList();
+        PriceForecastMetrics metrics = new PriceForecastMetrics(Instant.now(), series.size(), transitions.size(),
+                evaluation.folds(), scores, comparisonNote(scores, transitions.size(), series.size()));
         trained = new Trained(model, metrics);
         return metrics;
+    }
+
+    /** Says plainly whether Ridge beat the "Average increase" baseline, so small-data results are not oversold. */
+    private static String comparisonNote(List<PriceModelEvaluator.Score> scores, int transitions, int series) {
+        PriceModelEvaluator.Score ridge = scores.get(0);
+        PriceModelEvaluator.Score average = scores.stream()
+                .filter(s -> s.name().equals("Average increase")).findFirst().orElse(scores.get(scores.size() - 1));
+        boolean beats = ridge.rmseGrowthPoints() < average.rmseGrowthPoints() && ridge.maeMonths() < average.maeMonths();
+        return "Trained on " + transitions + " real price-change examples from " + series
+                + " price histories, tested leave-one-service-out. Ridge growth error " + ridge.rmseGrowthPoints()
+                + " points vs " + average.rmseGrowthPoints() + " for the average-increase baseline; timing error "
+                + ridge.maeMonths() + " vs " + average.maeMonths() + " months. "
+                + (beats ? "Ridge beats the baseline on both."
+                        : "Ridge does not beat the simple average baseline yet, so treat forecasts as rough averages.");
     }
 
     public Optional<PriceForecastMetrics> metrics() {
@@ -103,7 +110,6 @@ public class PriceForecastService {
                 .filter(s -> s.getUser().getId().equals(user.getId()))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Subscription not found"));
         String serviceName = subscription.getService().getName();
-        String category = subscription.getService().getCategory().getName();
 
         List<LocalDate> dates = new ArrayList<>();
         List<Double> prices = new ArrayList<>();
@@ -126,18 +132,18 @@ public class PriceForecastService {
             return unavailable(subscriptionId, serviceName, current, observed, "The forecast model is not trained yet.");
         }
 
-        PriceSeries series = new PriceSeries("forecast", category, false, dates, prices);
+        PriceSeries series = new PriceSeries("forecast", subscription.getService().getCategory().getName(), dates, prices);
         PriceForecastModel.Prediction prediction = model.model().predict(PriceFeatures.features(series, prices.size() - 1));
         double ratio = Math.exp(prediction.growth());
         BigDecimal predicted = current.multiply(BigDecimal.valueOf(ratio)).setScale(0, RoundingMode.HALF_UP);
 
         LocalDate lastChange = dates.get(dates.size() - 1);
         LocalDate expected = lastChange.plusDays(Math.round(prediction.months() * 30.4375));
-        String note = "Rough estimate from this subscription's price history and typical " + category + " patterns.";
-        if (expected.isBefore(LocalDate.now())) {
-            expected = LocalDate.now().plusDays(30);
+        String note = "Rough estimate from this subscription's price history and the typical gaps and increases seen across services.";
+        if (expected.isBefore(AppTime.today())) {
+            expected = AppTime.today().plusDays(30);
             note = "A change looks overdue compared with the usual gap. Rough estimate from this subscription's price "
-                    + "history and typical " + category + " patterns.";
+                    + "history and the typical gaps and increases seen across services.";
         }
         return new ForecastResponse(subscriptionId, serviceName, current, predicted,
                 round1((ratio - 1.0) * 100.0), round1(prediction.months()), expected, observed, note);

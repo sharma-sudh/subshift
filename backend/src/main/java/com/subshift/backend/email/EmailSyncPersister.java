@@ -1,5 +1,6 @@
 package com.subshift.backend.email;
 
+import com.subshift.backend.common.AppTime;
 import com.subshift.backend.catalog.Category;
 import com.subshift.backend.catalog.CategoryRepository;
 import com.subshift.backend.catalog.Service;
@@ -102,7 +103,7 @@ public class EmailSyncPersister {
 
     private final class Run {
         final User user;
-        final LocalDate today = LocalDate.now();
+        final LocalDate today = AppTime.today();
         final List<Service> known = new ArrayList<>(serviceRepository.findAll());
         final Map<Integer, Subscription> subscriptions = new HashMap<>();
         Category fallbackCategory;

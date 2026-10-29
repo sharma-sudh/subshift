@@ -1,5 +1,6 @@
 package com.subshift.backend.mail;
 
+import com.subshift.backend.common.AppTime;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -27,7 +28,6 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.net.URI;
 import java.time.Duration;
 import java.time.Instant;
-import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
@@ -168,7 +168,7 @@ public class OutlookProvider implements MailProvider {
                 ? EmailFetcher.htmlToText(content)
                 : content.replaceAll("\\s+", " ").trim();
         return new FetchedEmail(id, message.path("subject").asText(""), fromText,
-                receivedAt.atZone(ZoneId.systemDefault()).toLocalDate(), receivedAt,
+                AppTime.dateOf(receivedAt), receivedAt,
                 EmailFetcher.truncate(text, emailProps.maxBodyChars()));
     }
 

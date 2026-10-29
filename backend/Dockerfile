@@ -16,4 +16,4 @@ RUN touch .env && chown app:app .env
 USER app
 ENV SPRING_PROFILES_ACTIVE=prod
 # Render's free instance has 512 MB of memory
-ENTRYPOINT ["java", "-XX:MaxRAMPercentage=70", "-XX:+UseSerialGC", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-XX:MaxRAMPercentage=70", "-XX:+UseSerialGC", "-Duser.timezone=UTC", "-jar", "app.jar"]
